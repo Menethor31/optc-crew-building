@@ -11,14 +11,20 @@ export function getCharacterPortrait(id: number): string {
   return `${OPTC_DB_BASE}/api/images/full/transparent/${thousands}/${thousandsPadded}/${idPadded}.png`;
 }
 
-// Thumbnail uses the same URL (no separate thumbnail endpoint found)
+// Thumbnail uses the same URL
 export function getCharacterThumbnail(id: number): string {
   return getCharacterPortrait(id);
 }
 
+// For dual types like "STR/QCK", return the first type
+function getPrimaryType(type: string): string {
+  if (!type) return '';
+  return type.split('/')[0].trim().toUpperCase();
+}
+
 // Type color mapping
 export function getTypeColor(type: string): string {
-  switch (type?.toUpperCase()) {
+  switch (getPrimaryType(type)) {
     case 'STR': return '#E74C3C';
     case 'DEX': return '#2ECC71';
     case 'QCK': return '#3498DB';
@@ -29,12 +35,12 @@ export function getTypeColor(type: string): string {
 }
 
 export function getTypeBgClass(type: string): string {
-  switch (type?.toUpperCase()) {
-    case 'STR': return 'border-str bg-str/20';
-    case 'DEX': return 'border-dex bg-dex/20';
-    case 'QCK': return 'border-qck bg-qck/20';
-    case 'PSY': return 'border-psy bg-psy/20';
-    case 'INT': return 'border-int bg-int/20';
+  switch (getPrimaryType(type)) {
+    case 'STR': return 'border-red-500 bg-red-500/20';
+    case 'DEX': return 'border-green-500 bg-green-500/20';
+    case 'QCK': return 'border-blue-500 bg-blue-500/20';
+    case 'PSY': return 'border-yellow-500 bg-yellow-500/20';
+    case 'INT': return 'border-purple-500 bg-purple-500/20';
     default: return 'border-optc-border bg-optc-bg-hover';
   }
 }

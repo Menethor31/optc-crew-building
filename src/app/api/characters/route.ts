@@ -39,8 +39,8 @@ export async function GET(request: Request) {
       cachedData = Object.values(unitsObject).map((unit: any) => ({
         id: parseInt(unit.id) || 0,
         name: unit.name || '',
-        type: unit.type || 'Unknown',
-        class: unit.class || 'Unknown',
+        type: Array.isArray(unit.type) ? unit.type.join('/') : (unit.type || 'Unknown'),
+        class: Array.isArray(unit.class) ? unit.class.join(', ') : (unit.class || 'Unknown'),
         stars: parseInt(unit.stars) || 0,
       }));
 
