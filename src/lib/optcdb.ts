@@ -1,14 +1,18 @@
 const OPTC_DB_BASE = 'https://2shankz.github.io/optc-db.github.io';
 
 // Get character portrait URL (full transparent image)
-// Format: api/images/full/transparent/{thousands}/{thousands_padded}/{id_padded}.png
-// Example ID 1:    api/images/full/transparent/0/000/0001.png
-// Example ID 2251: api/images/full/transparent/2/002/2251.png
+// Pattern: api/images/full/transparent/{thousands}/{hundreds_of_remainder}/{id_padded}.png
+// ID 1:    /0/000/0001.png  (0, floor(1%1000/100)*100=0 -> "000")
+// ID 306:  /0/300/0306.png  (0, floor(306%1000/100)*100=300 -> "300")
+// ID 2251: /2/200/2251.png  (2, floor(251/100)*100=200 -> "200")
+// ID 3730: /3/700/3730.png  (3, floor(730/100)*100=700 -> "700")
 export function getCharacterPortrait(id: number): string {
   const thousands = Math.floor(id / 1000);
-  const thousandsPadded = String(thousands).padStart(3, '0');
+  const remainder = id % 1000;
+  const hundreds = Math.floor(remainder / 100) * 100;
+  const hundredsPadded = String(hundreds).padStart(3, '0');
   const idPadded = String(id).padStart(4, '0');
-  return `${OPTC_DB_BASE}/api/images/full/transparent/${thousands}/${thousandsPadded}/${idPadded}.png`;
+  return `${OPTC_DB_BASE}/api/images/full/transparent/${thousands}/${hundredsPadded}/${idPadded}.png`;
 }
 
 // Thumbnail uses the same URL
