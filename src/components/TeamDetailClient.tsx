@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Team, TeamUnit, TeamGuide, Stage } from '@/types/database';
-import { getCharacterThumbnail, getTypeColor } from '@/lib/optcdb';
+import { getCharacterThumbnail, getTypeColor, SHIPS, Ship } from '@/lib/optcdb';
 import CharacterTooltip from './CharacterTooltip';
+import ShipTooltip from './ShipTooltip';
+import SimilarCharacters from './SimilarCharacters';
 
 interface TeamDetailClientProps { teamId: string; }
 
@@ -17,6 +19,8 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
   const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
+  const [showShipTooltip, setShowShipTooltip] = useState(false);
+  const [shipImgError, setShipImgError] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -37,10 +41,22 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
 
   function handleImgError(id: number) { setImgErrors((prev) => new Set(prev).add(id)); }
 
+  // Find ship data from name
+  function getShipData(shipName: string): Ship | null {
+    if (!shipName) return null;
+    const lower = shipName.toLowerCase();
+    return SHIPS.find(s => s.name.toLowerCase() === lower) ||
+           SHIPS.find(s => s.name.toLowerCase().includes(lower)) ||
+           null;
+  }
+
   function UnitPortrait({ unitId, supportId, label }: { unitId: number; supportId?: number | null; label: string }) {
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="relative">
+          {/* Similar characters button */}
+          <SimilarCharacters unitId={unitId} />
+
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border-2 relative cursor-pointer"
             style={{ borderColor: getTypeColor('') }}
             onClick={() => setActiveTooltip(activeTooltip === unitId ? null : unitId)}>
@@ -71,6 +87,36 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
           )}
         </div>
         <p className="text-optc-text-secondary text-[10px] sm:text-xs font-medium text-center">{label}</p>
+      </div>
+    );
+  }
+
+  function ShipPortrait({ shipName }: { shipName: string }) {
+    const shipData = getShipData(shipName);
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className="relative">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border-2 border-optc-border relative cursor-pointer bg-optc-bg-card"
+            onClick={() => setShowShipTooltip(!showShipTooltip)}>
+            {shipData && !shipImgError ? (
+              <img src={shipData.thumbnail} alt={shipName}
+                className="w-full h-full object-cover"
+                onError={() => setShipImgError(true)} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover">
+                <span className="text-2xl">🚢</span>
+              </div>
+            )}
+            {/* Name overlay */}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
+              <p className="text-white text-[8px] leading-tight truncate text-center">{shipName}</p>
+            </div>
+          </div>
+          {showShipTooltip && (
+            <ShipTooltip shipName={shipName} position="above" onClose={() => setShowShipTooltip(false)} />
+          )}
+        </div>
+        <p className="text-optc-text-secondary text-[10px] sm:text-xs font-medium text-center">Ship</p>
       </div>
     );
   }
@@ -106,7 +152,6 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
         <h1 className="text-2xl sm:text-3xl font-bold text-optc-text">{team.name}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-optc-text-secondary">
           <span>by {team.submitted_by}</span>
-          {team.ship && <span>&bull; 🚢 {team.ship}</span>}
           {team.video_url && <a href={team.video_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">&bull; 📹 YouTube</a>}
         </div>
         {team.description && <p className="mt-4 text-optc-text-secondary text-sm">{team.description}</p>}
@@ -115,15 +160,25 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
       <div className="mt-8">
         <h2 className="text-xl font-bold text-optc-text mb-4">Team</h2>
         <div className="bg-optc-bg-card border border-optc-border rounded-2xl p-6">
-          <div className="space-y-4">
-            {rows.map((row, rowIdx) => (
-              <div key={rowIdx} className="flex justify-center gap-8 sm:gap-16">
-                {row.map((unit) => (
-                  <UnitPortrait key={unit.position} unitId={unit.unit_id} supportId={unit.support_id} label={positionLabels[unit.position - 1]} />
-                ))}
-                {row.length < 2 && <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg border-2 border-dashed border-optc-border/30" />}
+          <div className="flex gap-6 items-start">
+            {/* Ship slot */}
+            {team.ship && (
+              <div className="flex-shrink-0">
+                <ShipPortrait shipName={team.ship} />
               </div>
-            ))}
+            )}
+
+            {/* Team grid */}
+            <div className="flex-1 space-y-4">
+              {rows.map((row, rowIdx) => (
+                <div key={rowIdx} className="flex justify-center gap-8 sm:gap-16">
+                  {row.map((unit) => (
+                    <UnitPortrait key={unit.position} unitId={unit.unit_id} supportId={unit.support_id} label={positionLabels[unit.position - 1]} />
+                  ))}
+                  {row.length < 2 && <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg border-2 border-dashed border-optc-border/30" />}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

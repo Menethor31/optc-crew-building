@@ -13,6 +13,10 @@ interface CharacterTooltipProps {
 }
 
 interface CharDetail {
+  name?: string;
+  type?: string;
+  class?: string;
+  stars?: number;
   captain?: string;
   special?: string;
   specialName?: string;
@@ -23,9 +27,24 @@ interface CharDetail {
 // Cache for fetched details
 const detailsCache: Record<number, CharDetail> = {};
 
+// Sanitize HTML: only allow safe tags
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  // Allow: b, strong, i, em, br, span, u, small
+  // Remove everything else
+  return html
+    .replace(/<(?!\/?(?:b|strong|i|em|br|span|u|small)\b)[^>]*>/gi, '')
+    .replace(/\n/g, '<br/>');
+}
+
 export default function CharacterTooltip({ unitId, charName, charType, charClass, position, onClose }: CharacterTooltipProps) {
   const [detail, setDetail] = useState<CharDetail | null>(detailsCache[unitId] || null);
   const [loading, setLoading] = useState(!detailsCache[unitId]);
+
+  // Use provided props or fallback to fetched data
+  const displayName = charName || detail?.name || `Unit #${unitId}`;
+  const displayType = charType || detail?.type || '';
+  const displayClass = charClass || detail?.class || '';
 
   useEffect(() => {
     if (detailsCache[unitId]) { setDetail(detailsCache[unitId]); setLoading(false); return; }
@@ -57,14 +76,14 @@ export default function CharacterTooltip({ unitId, charName, charType, charClass
         onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="px-3 py-2 border-b border-optc-border bg-optc-bg-hover/50">
-          <p className="text-optc-text text-xs font-bold truncate">{charName || `Unit #${unitId}`}</p>
+          <p className="text-optc-text text-xs font-bold truncate">{displayName}</p>
           <div className="flex items-center gap-2 mt-0.5">
-            {charType && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ color: getTypeColor(charType), backgroundColor: `${getTypeColor(charType)}20` }}>
-                {charType}
+            {displayType && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ color: getTypeColor(displayType), backgroundColor: `${getTypeColor(displayType)}20` }}>
+                {displayType}
               </span>
             )}
-            {charClass && <span className="text-optc-text-secondary text-[10px]">{charClass}</span>}
+            {displayClass && <span className="text-optc-text-secondary text-[10px]">{displayClass}</span>}
             <span className="text-optc-text-secondary text-[10px]">#{unitId}</span>
           </div>
         </div>
@@ -82,7 +101,8 @@ export default function CharacterTooltip({ unitId, charName, charType, charClass
               {detail.captain && (
                 <div>
                   <p className="text-[10px] font-bold text-optc-accent uppercase tracking-wide">Captain Ability</p>
-                  <p className="text-optc-text text-[11px] leading-relaxed whitespace-pre-wrap">{detail.captain}</p>
+                  <p className="text-optc-text text-[11px] leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(detail.captain) }} />
                 </div>
               )}
               {detail.special && (
@@ -90,7 +110,8 @@ export default function CharacterTooltip({ unitId, charName, charType, charClass
                   <p className="text-[10px] font-bold text-optc-accent uppercase tracking-wide">
                     Special{detail.specialName ? `: ${detail.specialName}` : ''}
                   </p>
-                  <p className="text-optc-text text-[11px] leading-relaxed whitespace-pre-wrap">{detail.special}</p>
+                  <p className="text-optc-text text-[11px] leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(detail.special) }} />
                 </div>
               )}
               {detail.cooldown && (
@@ -102,7 +123,8 @@ export default function CharacterTooltip({ unitId, charName, charType, charClass
               {detail.sailor && (
                 <div>
                   <p className="text-[10px] font-bold text-optc-accent uppercase tracking-wide">Sailor Ability</p>
-                  <p className="text-optc-text text-[11px] leading-relaxed whitespace-pre-wrap">{detail.sailor}</p>
+                  <p className="text-optc-text text-[11px] leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(detail.sailor) }} />
                 </div>
               )}
             </>

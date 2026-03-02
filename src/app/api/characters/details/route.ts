@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Cache for details data
 let cachedDetails: Record<string, any> | null = null;
+let cachedUnits: Record<string, any> | null = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -14,13 +15,11 @@ async function loadDetails(): Promise<Record<string, any>> {
   const response = await fetch(url);
   const jsText = await response.text();
 
-  // Extract the object from: window.details = {...}
   const match = jsText.match(/window\.details\s*=\s*(\{[\s\S]*\})\s*;?\s*$/);
   if (!match) {
     throw new Error('Could not parse details.js');
   }
 
-  // Parse using Function constructor (safer than eval)
   try {
     const fn = new Function('return ' + match[1]);
     cachedDetails = fn();
@@ -29,6 +28,48 @@ async function loadDetails(): Promise<Record<string, any>> {
   } catch (e) {
     throw new Error('Failed to evaluate details data');
   }
+}
+
+async function loadUnits(): Promise<Record<string, any>> {
+  if (cachedUnits) return cachedUnits;
+
+  const url = 'https://raw.githubusercontent.com/2Shankz/optc-db.github.io/master/common/data/units.js';
+  const response = await fetch(url);
+  const jsText = await response.text();
+
+  const match = jsText.match(/window\.units\s*=\s*(\{[\s\S]*\});?\s*$/);
+  if (!match) {
+    throw new Error('Could not parse units.js');
+  }
+
+  try {
+    cachedUnits = JSON.parse(match[1]);
+    return cachedUnits!;
+  } catch (e) {
+    throw new Error('Failed to parse units data');
+  }
+}
+
+function extractBasicInfo(unit: any): any {
+  if (!unit) return {};
+  let classStr = 'Unknown';
+  if (unit.class) {
+    if (typeof unit.class === 'string') {
+      classStr = unit.class;
+    } else if (Array.isArray(unit.class)) {
+      if (Array.isArray(unit.class[0])) {
+        classStr = 'Dual: ' + unit.class.map((c: any) => Array.isArray(c) ? c.join('/') : c).join(' & ');
+      } else {
+        classStr = unit.class.join('/');
+      }
+    }
+  }
+  return {
+    name: unit.name || '',
+    type: Array.isArray(unit.type) ? unit.type.join('/') : (unit.type || 'Unknown'),
+    class: classStr,
+    stars: parseInt(unit.stars) || 0,
+  };
 }
 
 function extractDetail(detail: any): any {
@@ -43,7 +84,6 @@ function extractDetail(detail: any): any {
     } else if (detail.captain.base) {
       result.captain = detail.captain.base;
     } else if (detail.captain.character1 && detail.captain.character2) {
-      // Dual character
       result.captain = `Character 1: ${detail.captain.character1}\nCharacter 2: ${detail.captain.character2}`;
       if (detail.captain.combined) {
         result.captain += `\nCombined: ${detail.captain.combined}`;
@@ -56,7 +96,6 @@ function extractDetail(detail: any): any {
     if (typeof detail.special === 'string') {
       result.special = detail.special;
     } else if (Array.isArray(detail.special)) {
-      // Multiple stages
       const last = detail.special[detail.special.length - 1];
       result.special = last?.description || last?.special || '';
       if (last?.cooldown) {
@@ -70,10 +109,8 @@ function extractDetail(detail: any): any {
           : detail.special.cooldown;
       }
     } else if (detail.special.character1 && detail.special.character2) {
-      // Dual character special
       result.special = `Character 1: ${detail.special.character1.description || detail.special.character1}\nCharacter 2: ${detail.special.character2.description || detail.special.character2}`;
       const cd1 = detail.special.character1?.cooldown;
-      const cd2 = detail.special.character2?.cooldown;
       if (cd1) result.cooldown = Array.isArray(cd1) ? cd1[cd1.length - 1] : cd1;
     }
   }
@@ -111,13 +148,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const details = await loadDetails();
+    const [details, units] = await Promise.all([loadDetails(), loadUnits()]);
     const detail = details[id];
-    if (!detail) {
+    const unit = units[id];
+
+    // Get basic info from units data
+    const basicInfo = extractBasicInfo(unit);
+
+    if (!detail && !unit) {
       return NextResponse.json({ error: 'Character not found', id }, { status: 404 });
     }
-    const extracted = extractDetail(detail);
-    return NextResponse.json({ id, ...extracted });
+
+    const extracted = detail ? extractDetail(detail) : {};
+    return NextResponse.json({ id, ...basicInfo, ...extracted });
   } catch (err) {
     console.error('Error loading details:', err);
     return NextResponse.json({ error: 'Failed to load character details' }, { status: 500 });
