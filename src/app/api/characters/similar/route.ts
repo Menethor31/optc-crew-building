@@ -94,12 +94,13 @@ function extractEffects(specialText: string): Set<string> {
 function similarityScore(effects1: Set<string>, effects2: Set<string>): number {
   if (effects1.size === 0 || effects2.size === 0) return 0;
   let intersection = 0;
-  for (const e of effects1) {
-    if (effects2.has(e)) intersection++;
+  const arr1 = Array.from(effects1);
+  for (let i = 0; i < arr1.length; i++) {
+    if (effects2.has(arr1[i])) intersection++;
   }
   // Jaccard similarity
-  const union = new Set([...effects1, ...effects2]).size;
-  return union > 0 ? intersection / union : 0;
+  const unionSet = new Set(arr1.concat(Array.from(effects2)));
+  return unionSet.size > 0 ? intersection / unionSet.size : 0;
 }
 
 export async function GET(request: NextRequest) {
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
           name: unit?.name || `Unit #${charId}`,
           type: unit ? (Array.isArray(unit.type) ? unit.type.join('/') : (unit.type || '')) : '',
           stars,
-          effects: [...charEffects].filter(e => sourceEffects.has(e)),
+          effects: Array.from(charEffects).filter(e => sourceEffects.has(e)),
         });
       }
     }
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       id,
-      sourceEffects: [...sourceEffects],
+      sourceEffects: Array.from(sourceEffects),
       similar,
     });
   } catch (err) {
