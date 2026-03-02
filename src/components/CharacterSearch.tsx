@@ -86,7 +86,7 @@ export default function CharacterSearch({
           </div>
           {showTooltip && !compact && (
             <CharacterTooltip unitId={selected.id} charName={selected.name}
-              charType={selected.type} charClass={selected.class}
+              charType={selected.type} charClass={Array.isArray(selected.class) ? selected.class.join('/') : selected.class}
               position="above" onClose={() => setShowTooltip(false)} />
           )}
         </div>
@@ -135,7 +135,7 @@ export default function CharacterSearch({
                   <div className="flex-1 min-w-0">
                     <p className="text-optc-text text-sm truncate">{char.name}</p>
                     <p className="text-optc-text-secondary text-xs">
-                      #{char.id} &bull; <span style={{ color: getTypeColor(char.type) }}>{char.type}</span> &bull; {char.class} &bull; {'★'.repeat(Math.min(char.stars || 0, 6))}
+                      #{char.id} &bull; <span style={{ color: getTypeColor(char.type) }}>{char.type}</span> &bull; {Array.isArray(char.class) ? char.class.join('/') : char.class} &bull; {'★'.repeat(Math.min(char.stars || 0, 6))}
                     </p>
                   </div>
                 </button>
