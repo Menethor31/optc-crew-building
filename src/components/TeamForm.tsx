@@ -60,7 +60,6 @@ export default function TeamForm({ stage }: TeamFormProps) {
     return (<button onClick={() => setIsOpen(true)} className="w-full py-3 bg-optc-accent hover:bg-optc-accent-hover text-white font-semibold rounded-xl transition-colors text-sm">+ Submit a Team</button>);
   }
 
-  // Grid positions: Row 1: [Captain, Friend Captain], Row 2: [Crew 1, Crew 2], Row 3: [Crew 3, Crew 4]
   const rows = [
     { label: ['Captain *', 'Friend Captain *'], indices: [0, 1] },
     { label: ['Crew 1', 'Crew 2'], indices: [2, 3] },
@@ -76,7 +75,7 @@ export default function TeamForm({ stage }: TeamFormProps) {
         </button>
       </div>
 
-      {/* Info fields */}
+      {/* Info */}
       <div className="space-y-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -94,34 +93,37 @@ export default function TeamForm({ stage }: TeamFormProps) {
             <input type="url" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full bg-optc-bg border border-optc-border rounded-lg px-3 py-2 text-optc-text placeholder-optc-text-secondary text-sm focus:outline-none focus:border-optc-accent" />
           </div>
           <div>
-            <label className="block text-xs text-optc-text-secondary mb-1 font-medium">Ship (optional)</label>
-            <ShipSearch onSelect={setSelectedShip} selectedShip={selectedShip} />
+            <label className="block text-xs text-optc-text-secondary mb-1 font-medium">Description (optional)</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="General notes..." rows={1} className="w-full bg-optc-bg border border-optc-border rounded-lg px-3 py-2 text-optc-text placeholder-optc-text-secondary text-sm focus:outline-none focus:border-optc-accent resize-y" />
           </div>
-        </div>
-        <div>
-          <label className="block text-xs text-optc-text-secondary mb-1 font-medium">Description (optional)</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="General notes..." rows={2} className="w-full bg-optc-bg border border-optc-border rounded-lg px-3 py-2 text-optc-text placeholder-optc-text-secondary text-sm focus:outline-none focus:border-optc-accent resize-y" />
         </div>
       </div>
 
-      {/* Team Composition - 2 columns x 3 rows */}
+      {/* Team Composition: 2x3 grid with ship slot */}
       <div className="mb-6">
         <h4 className="text-sm font-bold text-optc-text mb-3">Team Composition</h4>
-        <div className="space-y-3">
-          {rows.map((row, rowIdx) => (
-            <div key={rowIdx} className="grid grid-cols-2 gap-4">
-              {row.indices.map((idx, colIdx) => (
-                <div key={idx} className="flex items-center gap-2 p-2 bg-optc-bg rounded-lg border border-optc-border/50">
-                  {/* Main unit */}
-                  <CharacterSearch onSelect={(c) => handleUnitSelect(idx, c)} selectedId={units[idx]?.id} placeholder="Search..." />
-                  {/* Support */}
-                  <CharacterSearch onSelect={(c) => handleSupportSelect(idx, c)} selectedId={supports[idx]?.id} placeholder="+" compact={true} />
-                  {/* Label */}
-                  <span className="text-[10px] text-optc-text-secondary font-medium whitespace-nowrap hidden sm:block">{row.label[colIdx]}</span>
-                </div>
-              ))}
-            </div>
-          ))}
+        <div className="flex gap-6 items-start">
+          {/* Ship slot */}
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <span className="text-[10px] text-optc-text-secondary font-medium">Ship</span>
+            <ShipSearch onSelect={setSelectedShip} selectedShip={selectedShip} />
+          </div>
+          {/* 2x3 grid */}
+          <div className="flex-1 space-y-2">
+            {rows.map((row, rowIdx) => (
+              <div key={rowIdx} className="flex justify-center gap-4 sm:gap-6">
+                {row.indices.map((idx, colIdx) => (
+                  <div key={idx} className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] text-optc-text-secondary font-medium">{row.label[colIdx]}</span>
+                    <div className="flex items-end gap-1">
+                      <CharacterSearch onSelect={(c) => handleUnitSelect(idx, c)} selectedId={units[idx]?.id} placeholder="Search..." />
+                      <CharacterSearch onSelect={(c) => handleSupportSelect(idx, c)} selectedId={supports[idx]?.id} placeholder="+" compact={true} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

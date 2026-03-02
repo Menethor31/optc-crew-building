@@ -22,6 +22,9 @@ export default function Footer() {
               </a>
               {' '}&bull; Not affiliated with Bandai Namco
             </p>
+            <p className="mt-1 text-xs text-optc-text-secondary/70">
+              This site does not own any of the images. All images are owned by Eiichiro Oda/Shueisha, Toei Animation, and Bandai Namco.
+            </p>
           </div>
           <div className="flex items-center gap-4 text-sm text-optc-text-secondary">
             <Link

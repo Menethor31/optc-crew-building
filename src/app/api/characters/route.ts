@@ -36,13 +36,29 @@ export async function GET(request: Request) {
 
       // Transform object to array
       // Each entry: {"id":"1","name":"Monkey D. Luffy","type":"STR","class":"Fighter","stars":"2",...}
-      cachedData = Object.values(unitsObject).map((unit: any) => ({
-        id: parseInt(unit.id) || 0,
-        name: unit.name || '',
-        type: Array.isArray(unit.type) ? unit.type.join('/') : (unit.type || 'Unknown'),
-        class: Array.isArray(unit.class) ? unit.class.join(', ') : (unit.class || 'Unknown'),
-        stars: parseInt(unit.stars) || 0,
-      }));
+      cachedData = Object.values(unitsObject).map((unit: any) => {
+        // Handle class: can be string, array of strings, or array of arrays (dual char)
+        let classStr = 'Unknown';
+        if (unit.class) {
+          if (typeof unit.class === 'string') {
+            classStr = unit.class;
+          } else if (Array.isArray(unit.class)) {
+            // Check if it's array of arrays (dual character)
+            if (Array.isArray(unit.class[0])) {
+              classStr = 'Dual: ' + unit.class.map((c: any) => Array.isArray(c) ? c.join('/') : c).join(' & ');
+            } else {
+              classStr = unit.class.join('/');
+            }
+          }
+        }
+        return {
+          id: parseInt(unit.id) || 0,
+          name: unit.name || '',
+          type: Array.isArray(unit.type) ? unit.type.join('/') : (unit.type || 'Unknown'),
+          class: classStr,
+          stars: parseInt(unit.stars) || 0,
+        };
+      });
 
       cacheTimestamp = Date.now();
       console.log(`OPTC DB loaded: ${cachedData.length} characters`);
@@ -54,8 +70,12 @@ export async function GET(request: Request) {
     }
 
     // Search and filter
+    const isIdSearch = /^\d+$/.test(query);
     const results = cachedData!
-      .filter((c: any) => c.name && c.name.toLowerCase().includes(query))
+      .filter((c: any) => {
+        if (isIdSearch) return String(c.id).includes(query);
+        return c.name && c.name.toLowerCase().includes(query);
+      })
       .sort((a: any, b: any) => {
         // Prioritize exact starts
         const aStarts = a.name.toLowerCase().startsWith(query);

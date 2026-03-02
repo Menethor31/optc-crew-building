@@ -20,10 +20,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 bg-optc-accent rounded-lg flex items-center justify-center
-                          group-hover:bg-optc-accent-hover transition-colors">
-              <span className="text-white font-bold text-sm">⚓</span>
-            </div>
+            <img src="/logo.png" alt="OPTC Crew Building" className="w-10 h-10 object-contain" />
             <div>
               <span className="text-optc-text font-bold text-lg hidden sm:block">
                 OPTC Crew Building

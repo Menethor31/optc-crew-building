@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { OPTCCharacter } from '@/types/database';
 import { getCharacterThumbnail, getTypeColor } from '@/lib/optcdb';
+import CharacterTooltip from './CharacterTooltip';
 
 interface CharacterSearchProps {
   onSelect: (character: OPTCCharacter) => void;
@@ -21,7 +22,7 @@ export default function CharacterSearch({
   const [selected, setSelected] = useState<OPTCCharacter | null>(null);
   const [loading, setLoading] = useState(false);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
-  const [tooltip, setTooltip] = useState<OPTCCharacter | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,20 +41,13 @@ export default function CharacterSearch({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
-  // Focus input when modal opens
   useEffect(() => {
-    if (isModalOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    if (isModalOpen) setTimeout(() => inputRef.current?.focus(), 100);
   }, [isModalOpen]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (isModalOpen) { document.body.style.overflow = 'hidden'; }
+    else { document.body.style.overflow = ''; }
     return () => { document.body.style.overflow = ''; };
   }, [isModalOpen]);
 
@@ -62,7 +56,7 @@ export default function CharacterSearch({
   }
   function handleClear(e?: React.MouseEvent) {
     if (e) e.stopPropagation();
-    setSelected(null); setQuery('');
+    setSelected(null); setQuery(''); setShowTooltip(false);
     onSelect({ id: 0, name: '', type: '', class: '', stars: 0 });
   }
   function handleImgError(id: number) { setImgErrors((prev) => new Set(prev).add(id)); }
@@ -71,35 +65,29 @@ export default function CharacterSearch({
 
   return (
     <>
-      {/* Selected character or empty slot */}
       {selected ? (
-        <div className="relative group"
-          onMouseEnter={() => setTooltip(selected)} onMouseLeave={() => setTooltip(null)}
-          onTouchStart={() => setTooltip(tooltip ? null : selected)}>
+        <div className="relative group">
           <div className={`${size} rounded-lg overflow-hidden border-2 relative cursor-pointer`}
             style={{ borderColor: getTypeColor(selected.type) }}
-            onClick={() => setIsModalOpen(true)}>
+            onClick={() => setShowTooltip(!showTooltip)}
+            onContextMenu={(e) => { e.preventDefault(); handleClear(); }}>
             {!imgErrors.has(selected.id) ? (
               <img src={getCharacterThumbnail(selected.id)} alt={selected.name}
                 className="w-full h-full object-cover" onError={() => handleImgError(selected.id)} />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-xs text-optc-text-secondary">{selected.id}</div>
             )}
-            {/* X on hover */}
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              onClick={(e) => { handleClear(e); }}>
+              onClick={(e) => { e.stopPropagation(); handleClear(); }}>
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
           </div>
-          {/* Tooltip bubble */}
-          {tooltip && !compact && (
-            <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-optc-bg-card border border-optc-border rounded-lg shadow-xl whitespace-nowrap pointer-events-none">
-              <p className="text-optc-text text-xs font-medium">{tooltip.name}</p>
-              <p className="text-optc-text-secondary text-[10px]">#{tooltip.id} &bull; {tooltip.type} &bull; {tooltip.class}</p>
-              <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-optc-bg-card border-r border-b border-optc-border rotate-45 -mt-1"></div>
-            </div>
+          {showTooltip && !compact && (
+            <CharacterTooltip unitId={selected.id} charName={selected.name}
+              charType={selected.type} charClass={selected.class}
+              position="above" onClose={() => setShowTooltip(false)} />
           )}
         </div>
       ) : (
@@ -109,15 +97,11 @@ export default function CharacterSearch({
         </div>
       )}
 
-      {/* Search Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] sm:pt-[15vh]"
           onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setQuery(''); setResults([]); } }}>
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-          {/* Modal */}
           <div className="relative w-[95vw] max-w-lg bg-optc-bg-card border border-optc-border rounded-2xl shadow-2xl overflow-hidden mx-4">
-            {/* Header */}
             <div className="flex items-center gap-3 p-4 border-b border-optc-border">
               <svg className="w-5 h-5 text-optc-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -132,19 +116,10 @@ export default function CharacterSearch({
                 </svg>
               </button>
             </div>
-            {/* Results */}
             <div className="max-h-[50vh] overflow-y-auto">
-              {loading && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-optc-accent border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-              {!loading && query.length >= 2 && results.length === 0 && (
-                <div className="py-8 text-center text-optc-text-secondary text-sm">No characters found for &ldquo;{query}&rdquo;</div>
-              )}
-              {!loading && query.length < 2 && (
-                <div className="py-8 text-center text-optc-text-secondary text-sm">Type at least 2 characters to search</div>
-              )}
+              {loading && <div className="flex items-center justify-center py-8"><div className="w-6 h-6 border-2 border-optc-accent border-t-transparent rounded-full animate-spin" /></div>}
+              {!loading && query.length >= 2 && results.length === 0 && <div className="py-8 text-center text-optc-text-secondary text-sm">No characters found</div>}
+              {!loading && query.length < 2 && <div className="py-8 text-center text-optc-text-secondary text-sm">Type at least 2 characters</div>}
               {results.map((char) => (
                 <button key={char.id} onClick={() => handleSelect(char)} type="button"
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-optc-bg-hover transition-colors text-left border-b border-optc-border/20 last:border-0">
