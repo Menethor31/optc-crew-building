@@ -23,7 +23,11 @@ export default function TeamForm({ stage }: TeamFormProps) {
   const [submittedBy, setSubmittedBy] = useState('');
   const [units, setUnits] = useState<(OPTCCharacter | null)[]>([null, null, null, null, null, null]);
   const [supports, setSupports] = useState<(OPTCCharacter | null)[]>([null, null, null, null, null, null]);
-  const [guides, setGuides] = useState<GuideStep[]>([{ stageNumber: 1, description: '' }]);
+  const [guides, setGuides] = useState<GuideStep[]>([
+    { stageNumber: 1, description: '' },
+    { stageNumber: 2, description: '' },
+    { stageNumber: 3, description: '' },
+  ]);
 
   function handleUnitSelect(i: number, c: OPTCCharacter) { const n = [...units]; n[i] = c.id ? c : null; setUnits(n); }
   function handleSupportSelect(i: number, c: OPTCCharacter) { const n = [...supports]; n[i] = c.id ? c : null; setSupports(n); }

@@ -2,176 +2,173 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { OPTCCharacter } from '@/types/database';
-import { getCharacterThumbnail, getTypeBgClass, getTypeColor } from '@/lib/optcdb';
+import { getCharacterThumbnail, getTypeColor } from '@/lib/optcdb';
 
 interface CharacterSearchProps {
   onSelect: (character: OPTCCharacter) => void;
   selectedId?: number | null;
   placeholder?: string;
   label?: string;
-  compact?: boolean; // for support slots
+  compact?: boolean;
 }
 
 export default function CharacterSearch({
-  onSelect,
-  selectedId,
-  placeholder = 'Search character...',
-  label,
-  compact = false,
+  onSelect, selectedId, placeholder = 'Search...', label, compact = false,
 }: CharacterSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OPTCCharacter[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<OPTCCharacter | null>(null);
   const [loading, setLoading] = useState(false);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [tooltip, setTooltip] = useState<OPTCCharacter | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.length < 2) { setResults([]); setIsOpen(false); return; }
+    if (query.length < 2) { setResults([]); return; }
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/characters?q=${encodeURIComponent(query)}&limit=15`);
+        const res = await fetch(`/api/characters?q=${encodeURIComponent(query)}&limit=20`);
         const data = await res.json();
-        if (data.characters) { setResults(data.characters); setIsOpen(true); }
+        if (data.characters) setResults(data.characters);
       } catch (err) { console.error('Error:', err); }
       finally { setLoading(false); }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
+  // Focus input when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isModalOpen]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isModalOpen]);
+
   function handleSelect(char: OPTCCharacter) {
-    setSelected(char); setQuery(''); setIsOpen(false); onSelect(char);
+    setSelected(char); setQuery(''); setResults([]); setIsModalOpen(false); onSelect(char);
   }
-  function handleClear() {
+  function handleClear(e?: React.MouseEvent) {
+    if (e) e.stopPropagation();
     setSelected(null); setQuery('');
     onSelect({ id: 0, name: '', type: '', class: '', stars: 0 });
   }
-  function handleImgError(id: number) {
-    setImgErrors((prev) => new Set(prev).add(id));
-  }
+  function handleImgError(id: number) { setImgErrors((prev) => new Set(prev).add(id)); }
 
   const size = compact ? 'w-12 h-12' : 'w-20 h-20';
 
   return (
-    <div ref={wrapperRef} className="relative">
-      {label && (
-        <label className="block text-xs text-optc-text-secondary mb-1 font-medium">{label}</label>
-      )}
-
+    <>
+      {/* Selected character or empty slot */}
       {selected ? (
-        <div className="relative group cursor-pointer" onClick={handleClear}>
-          <div
-            className={`${size} rounded-lg overflow-hidden border-2 relative`}
+        <div className="relative group"
+          onMouseEnter={() => setTooltip(selected)} onMouseLeave={() => setTooltip(null)}
+          onTouchStart={() => setTooltip(tooltip ? null : selected)}>
+          <div className={`${size} rounded-lg overflow-hidden border-2 relative cursor-pointer`}
             style={{ borderColor: getTypeColor(selected.type) }}
-          >
+            onClick={() => setIsModalOpen(true)}>
             {!imgErrors.has(selected.id) ? (
-              <img
-                src={getCharacterThumbnail(selected.id)}
-                alt={selected.name}
-                className="w-full h-full object-cover"
-                onError={() => handleImgError(selected.id)}
-              />
+              <img src={getCharacterThumbnail(selected.id)} alt={selected.name}
+                className="w-full h-full object-cover" onError={() => handleImgError(selected.id)} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-xs text-optc-text-secondary">
-                {selected.id}
-              </div>
+              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-xs text-optc-text-secondary">{selected.id}</div>
             )}
-            {/* Name overlay */}
-            {!compact && (
-              <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
-                <p className="text-white text-[9px] leading-tight truncate">{selected.name.split(' - ')[0]}</p>
-              </div>
-            )}
-            {/* X button on hover */}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            {/* X on hover */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              onClick={(e) => { handleClear(e); }}>
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="relative">
-          <div
-            className={`${size} rounded-lg border-2 border-dashed border-optc-border hover:border-optc-accent/50 transition-colors overflow-hidden`}
-          >
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={compact ? '+' : placeholder}
-              className={`w-full h-full bg-optc-bg-card text-optc-text placeholder-optc-text-secondary
-                       text-center focus:outline-none ${compact ? 'text-lg' : 'text-[10px] px-1'}`}
-            />
-          </div>
-          {loading && (
-            <div className="absolute right-1 top-1">
-              <div className="w-3 h-3 border-2 border-optc-accent border-t-transparent rounded-full animate-spin" />
+          {/* Tooltip bubble */}
+          {tooltip && !compact && (
+            <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-optc-bg-card border border-optc-border rounded-lg shadow-xl whitespace-nowrap pointer-events-none">
+              <p className="text-optc-text text-xs font-medium">{tooltip.name}</p>
+              <p className="text-optc-text-secondary text-[10px]">#{tooltip.id} &bull; {tooltip.type} &bull; {tooltip.class}</p>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-optc-bg-card border-r border-b border-optc-border rotate-45 -mt-1"></div>
             </div>
           )}
         </div>
+      ) : (
+        <div className={`${size} rounded-lg border-2 border-dashed border-optc-border hover:border-optc-accent/50 transition-colors cursor-pointer flex items-center justify-center bg-optc-bg-card`}
+          onClick={() => setIsModalOpen(true)}>
+          <span className={`text-optc-text-secondary ${compact ? 'text-lg' : 'text-xs'}`}>{compact ? '+' : placeholder}</span>
+        </div>
       )}
 
-      {/* Dropdown results */}
-      {isOpen && results.length > 0 && (
-        <div className="absolute z-50 w-64 mt-1 bg-optc-bg-card border border-optc-border
-                      rounded-lg shadow-xl max-h-72 overflow-y-auto" style={{ left: compact ? '-100px' : '0' }}>
-          {results.map((char) => (
-            <button
-              key={char.id}
-              onClick={() => handleSelect(char)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-optc-bg-hover
-                       transition-colors text-left border-b border-optc-border/30 last:border-0"
-              type="button"
-            >
-              <div
-                className="w-10 h-10 rounded flex-shrink-0 overflow-hidden border-2"
-                style={{ borderColor: getTypeColor(char.type) }}
-              >
-                {!imgErrors.has(char.id) ? (
-                  <img
-                    src={getCharacterThumbnail(char.id)}
-                    alt={char.name}
-                    className="w-full h-full object-cover"
-                    onError={() => handleImgError(char.id)}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[10px]">
-                    {char.id}
+      {/* Search Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] sm:pt-[15vh]"
+          onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setQuery(''); setResults([]); } }}>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+          {/* Modal */}
+          <div className="relative w-[95vw] max-w-lg bg-optc-bg-card border border-optc-border rounded-2xl shadow-2xl overflow-hidden mx-4">
+            {/* Header */}
+            <div className="flex items-center gap-3 p-4 border-b border-optc-border">
+              <svg className="w-5 h-5 text-optc-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input ref={inputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search character name or ID..."
+                className="flex-1 bg-transparent text-optc-text placeholder-optc-text-secondary text-sm focus:outline-none" />
+              <button onClick={() => { setIsModalOpen(false); setQuery(''); setResults([]); }}
+                className="text-optc-text-secondary hover:text-optc-text p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Results */}
+            <div className="max-h-[50vh] overflow-y-auto">
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-optc-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {!loading && query.length >= 2 && results.length === 0 && (
+                <div className="py-8 text-center text-optc-text-secondary text-sm">No characters found for &ldquo;{query}&rdquo;</div>
+              )}
+              {!loading && query.length < 2 && (
+                <div className="py-8 text-center text-optc-text-secondary text-sm">Type at least 2 characters to search</div>
+              )}
+              {results.map((char) => (
+                <button key={char.id} onClick={() => handleSelect(char)} type="button"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-optc-bg-hover transition-colors text-left border-b border-optc-border/20 last:border-0">
+                  <div className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden border-2"
+                    style={{ borderColor: getTypeColor(char.type) }}>
+                    {!imgErrors.has(char.id) ? (
+                      <img src={getCharacterThumbnail(char.id)} alt={char.name}
+                        className="w-full h-full object-cover" onError={() => handleImgError(char.id)} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[10px]">{char.id}</div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-optc-text text-xs truncate">{char.name}</p>
-                <p className="text-optc-text-secondary text-[10px]">
-                  #{char.id} &bull; {char.type} &bull; {'★'.repeat(Math.min(char.stars || 0, 6))}
-                </p>
-              </div>
-            </button>
-          ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-optc-text text-sm truncate">{char.name}</p>
+                    <p className="text-optc-text-secondary text-xs">
+                      #{char.id} &bull; <span style={{ color: getTypeColor(char.type) }}>{char.type}</span> &bull; {char.class} &bull; {'★'.repeat(Math.min(char.stars || 0, 6))}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
-
-      {isOpen && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="absolute z-50 w-64 mt-1 bg-optc-bg-card border border-optc-border
-                      rounded-lg shadow-xl p-3 text-center text-optc-text-secondary text-xs">
-          No characters found for &ldquo;{query}&rdquo;
-        </div>
-      )}
-    </div>
+    </>
   );
 }

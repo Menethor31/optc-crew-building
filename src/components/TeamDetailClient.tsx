@@ -6,9 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Team, TeamUnit, TeamGuide, Stage } from '@/types/database';
 import { getCharacterThumbnail, getTypeColor } from '@/lib/optcdb';
 
-interface TeamDetailClientProps {
-  teamId: string;
-}
+interface TeamDetailClientProps { teamId: string; }
 
 export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   const [team, setTeam] = useState<Team | null>(null);
@@ -17,15 +15,15 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   const [stage, setStage] = useState<Stage | null>(null);
   const [loading, setLoading] = useState(true);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
+  const [tooltip, setTooltip] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       const { data: teamData } = await (supabase as any).from('teams').select('*').eq('id', teamId).single();
       if (!teamData) { setLoading(false); return; }
-      const typedTeam = teamData as Team;
-      setTeam(typedTeam);
-      const { data: stageData } = await supabase.from('stages').select('*').eq('id', typedTeam.stage_id).single();
+      setTeam(teamData as Team);
+      const { data: stageData } = await supabase.from('stages').select('*').eq('id', (teamData as Team).stage_id).single();
       if (stageData) setStage(stageData as Stage);
       const { data: unitsData } = await (supabase as any).from('team_units').select('*').eq('team_id', teamId).order('position');
       if (unitsData) setUnits(unitsData as TeamUnit[]);
@@ -38,26 +36,44 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
 
   function handleImgError(id: number) { setImgErrors((prev) => new Set(prev).add(id)); }
 
-  function renderPortrait(unitId: number, size: string = 'w-20 h-20', supportId?: number | null) {
+  function UnitPortrait({ unitId, supportId, label }: { unitId: number; supportId?: number | null; label: string }) {
     return (
-      <div className="relative">
-        <div className={`${size} rounded-lg overflow-hidden border-2 relative`} style={{ borderColor: getTypeColor('') }}>
-          {!imgErrors.has(unitId) ? (
-            <img src={getCharacterThumbnail(unitId)} alt={`Unit ${unitId}`} className="w-full h-full object-cover" onError={() => handleImgError(unitId)} />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-optc-text-secondary text-xs">#{unitId}</div>
-          )}
-        </div>
-        {/* Support portrait */}
-        {supportId && (
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded border-2 overflow-hidden" style={{ borderColor: getTypeColor('') }}>
-            {!imgErrors.has(supportId) ? (
-              <img src={getCharacterThumbnail(supportId)} alt={`Support ${supportId}`} className="w-full h-full object-cover" onError={() => handleImgError(supportId)} />
+      <div className="flex flex-col items-center gap-1">
+        <div className="relative"
+          onMouseEnter={() => setTooltip(unitId)} onMouseLeave={() => setTooltip(null)}
+          onTouchStart={() => setTooltip(tooltip === unitId ? null : unitId)}>
+          {/* Main unit */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border-2 relative"
+            style={{ borderColor: getTypeColor('') }}>
+            {!imgErrors.has(unitId) ? (
+              <img src={getCharacterThumbnail(unitId)} alt={`Unit ${unitId}`}
+                className="w-full h-full object-cover" onError={() => handleImgError(unitId)} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[8px]">S</div>
+              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-optc-text-secondary text-xs">#{unitId}</div>
             )}
           </div>
-        )}
+          {/* Support */}
+          {supportId && (
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 sm:w-9 sm:h-9 rounded border-2 overflow-hidden bg-optc-bg-card"
+              style={{ borderColor: getTypeColor('') }}>
+              {!imgErrors.has(supportId) ? (
+                <img src={getCharacterThumbnail(supportId)} alt={`Support ${supportId}`}
+                  className="w-full h-full object-cover" onError={() => handleImgError(supportId)} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[8px]">S</div>
+              )}
+            </div>
+          )}
+          {/* Tooltip */}
+          {tooltip === unitId && (
+            <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-optc-bg-card border border-optc-border rounded-lg shadow-xl whitespace-nowrap pointer-events-none">
+              <p className="text-optc-text text-xs font-medium">Unit #{unitId}</p>
+              {supportId && <p className="text-optc-text-secondary text-[10px]">Support: #{supportId}</p>}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-optc-bg-card border-r border-b border-optc-border rotate-45 -mt-1"></div>
+            </div>
+          )}
+        </div>
+        <p className="text-optc-text-secondary text-[10px] sm:text-xs font-medium text-center">{label}</p>
       </div>
     );
   }
@@ -68,25 +84,21 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   }
 
   if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-optc-accent border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
+    return (<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-optc-accent border-t-transparent rounded-full animate-spin" /></div></div>);
   }
-
   if (!team) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <p className="text-center text-optc-text-secondary py-20">Team not found.</p>
-      </div>
-    );
+    return (<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><p className="text-center text-optc-text-secondary py-20">Team not found.</p></div>);
   }
 
-  const positionLabels = ['Captain', 'Friend Captain', 'Crew 1', 'Crew 2', 'Crew 3', 'Crew 4'];
   const sortedUnits = [...units].sort((a, b) => a.position - b.position);
+  const positionLabels = ['Captain', 'Friend Captain', 'Crew 1', 'Crew 2', 'Crew 3', 'Crew 4'];
+
+  // Build 2x3 grid rows
+  const rows = [
+    sortedUnits.filter(u => u.position <= 2),  // Captain + Friend Captain
+    sortedUnits.filter(u => u.position >= 3 && u.position <= 4), // Crew 1 + 2
+    sortedUnits.filter(u => u.position >= 5 && u.position <= 6), // Crew 3 + 4
+  ];
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -107,23 +119,31 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
           <span>by {team.submitted_by}</span>
           {team.ship && <span>&bull; 🚢 {team.ship}</span>}
           {team.video_url && (
-            <a href={team.video_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 transition-colors">&bull; 📹 YouTube</a>
+            <a href={team.video_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">&bull; 📹 YouTube</a>
           )}
         </div>
-        {team.description && (<p className="mt-4 text-optc-text-secondary text-sm">{team.description}</p>)}
+        {team.description && <p className="mt-4 text-optc-text-secondary text-sm">{team.description}</p>}
       </div>
 
-      {/* Team Composition - Visual */}
+      {/* Team Composition - 2 columns x 3 rows */}
       <div className="mt-8">
         <h2 className="text-xl font-bold text-optc-text mb-4">Team</h2>
         <div className="bg-optc-bg-card border border-optc-border rounded-2xl p-6">
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 justify-items-center">
-            {sortedUnits.map((unit) => (
-              <div key={unit.position} className="flex flex-col items-center gap-2">
-                {renderPortrait(unit.unit_id, 'w-20 h-20', unit.support_id)}
-                <p className="text-optc-text-secondary text-[10px] font-medium text-center">
-                  {positionLabels[unit.position - 1]}
-                </p>
+          <div className="space-y-4">
+            {rows.map((row, rowIdx) => (
+              <div key={rowIdx} className="flex justify-center gap-8 sm:gap-16">
+                {row.map((unit) => (
+                  <UnitPortrait
+                    key={unit.position}
+                    unitId={unit.unit_id}
+                    supportId={unit.support_id}
+                    label={positionLabels[unit.position - 1]}
+                  />
+                ))}
+                {/* Fill empty slots if needed */}
+                {row.length < 2 && (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg border-2 border-dashed border-optc-border/30" />
+                )}
               </div>
             ))}
           </div>
@@ -161,7 +181,7 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
 
       {stage && (
         <div className="mt-8">
-          <Link href={`/stages/${stage.id}`} className="text-optc-accent hover:text-optc-accent-hover text-sm font-medium transition-colors">
+          <Link href={`/stages/${stage.id}`} className="text-optc-accent hover:text-optc-accent-hover text-sm font-medium">
             ← Back to {stage.name}
           </Link>
         </div>
