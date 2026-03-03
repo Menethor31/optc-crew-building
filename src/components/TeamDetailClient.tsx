@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Team, TeamUnit, TeamGuide, Stage } from '@/types/database';
-import { getCharacterThumbnail, getTypeColor, SHIPS, Ship } from '@/lib/optcdb';
+import { getCharacterThumbnail, getTypeColor, getShipByName } from '@/lib/optcdb';
 import CharacterTooltip from './CharacterTooltip';
 import ShipTooltip from './ShipTooltip';
 import SimilarCharacters from './SimilarCharacters';
@@ -40,15 +40,6 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   }, [teamId]);
 
   function handleImgError(id: number) { setImgErrors((prev) => new Set(prev).add(id)); }
-
-  // Find ship data from name
-  function getShipData(shipName: string): Ship | null {
-    if (!shipName) return null;
-    const lower = shipName.toLowerCase();
-    return SHIPS.find(s => s.name.toLowerCase() === lower) ||
-           SHIPS.find(s => s.name.toLowerCase().includes(lower)) ||
-           null;
-  }
 
   function UnitPortrait({ unitId, supportId, label }: { unitId: number; supportId?: number | null; label: string }) {
     return (
@@ -92,7 +83,7 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   }
 
   function ShipPortrait({ shipName }: { shipName: string }) {
-    const shipData = getShipData(shipName);
+    const shipData = getShipByName(shipName);
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="relative">

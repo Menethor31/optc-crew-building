@@ -1,9 +1,5 @@
 const OPTC_DB_BASE = 'https://2shankz.github.io/optc-db.github.io';
 
-// Thumbnail (small, fast loading)
-// Format: api/images/thumbnail/glo/{thousands}/{hundreds_padded}/{id_padded}.png
-// ID 1:    /0/000/0001.png
-// ID 2251: /2/200/2251.png
 export function getCharacterThumbnail(id: number): string {
   const thousands = Math.floor(id / 1000);
   const remainder = id % 1000;
@@ -13,7 +9,6 @@ export function getCharacterThumbnail(id: number): string {
   return `${OPTC_DB_BASE}/api/images/thumbnail/glo/${thousands}/${hundredsPadded}/${idPadded}.png`;
 }
 
-// Full portrait (large, for detail pages)
 export function getCharacterPortrait(id: number): string {
   const thousands = Math.floor(id / 1000);
   const remainder = id % 1000;
@@ -23,7 +18,6 @@ export function getCharacterPortrait(id: number): string {
   return `${OPTC_DB_BASE}/api/images/full/transparent/${thousands}/${hundredsPadded}/${idPadded}.png`;
 }
 
-// For dual types like "STR/QCK", return the first type
 function getPrimaryType(type: string): string {
   if (!type) return '';
   return type.split('/')[0].trim().toUpperCase();
@@ -51,78 +45,151 @@ export function getTypeBgClass(type: string): string {
   }
 }
 
-// Ships data with gamewith thumbnails
 export interface Ship {
   id: number;
   name: string;
   thumbnail: string;
+  boost?: string;
+  special?: string;
+  superSpecial?: string;
 }
 
 export const SHIPS: Ship[] = [
-  { id: 1, name: 'Dinghy', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh1.png' },
-  { id: 2, name: 'Merry Go', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh2.png' },
-  { id: 3, name: 'Coffin Boat', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh3.png' },
-  { id: 4, name: 'Miss Love Duck', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh4.png' },
-  { id: 5, name: 'Baratie', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh5.png' },
-  { id: 6, name: 'Moby Dick', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh6.png' },
-  { id: 7, name: 'Marine Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh7.png' },
-  { id: 8, name: 'Thousand Sunny', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh8.png' },
-  { id: 9, name: 'Bezan Black', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh9.png' },
-  { id: 10, name: 'Aokiji Bicycle', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh10.png' },
-  { id: 11, name: 'Big Top', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh11.png' },
-  { id: 12, name: 'Striker', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh12.png' },
-  { id: 13, name: 'Red Force', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh13.png' },
-  { id: 14, name: 'Kuja Pirate Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh14.png' },
-  { id: 15, name: 'Rocketman', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh15.png' },
-  { id: 16, name: 'Ark Maxim', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh16.png' },
-  { id: 17, name: 'Sexy Foxy', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh17.png' },
-  { id: 18, name: 'Thriller Bark', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh18.png' },
-  { id: 19, name: 'Donquixote Pirates Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh19.png' },
-  { id: 20, name: 'Sun Pirates Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh20.png' },
-  { id: 21, name: 'Garp\'s Warship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh21.png' },
-  { id: 22, name: 'Polar Tang', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh22.png' },
-  { id: 23, name: 'Nostra Castello', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh23.png' },
-  { id: 24, name: 'Zunesha', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh24.png' },
-  { id: 25, name: 'Going Luffy Senpai', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh25.png' },
-  { id: 26, name: 'Thousand Sunny 2nd Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh26.png' },
-  { id: 27, name: 'Flying Dutchman', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh27.png' },
-  { id: 28, name: 'Germa 66 Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh28.png' },
-  { id: 29, name: 'Thousand Sunny 3rd Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh29.png' },
-  { id: 30, name: 'Queen Mama Chanter', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh30.png' },
-  { id: 31, name: 'Megalo', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh31.png' },
-  { id: 32, name: 'Thousand Sunny Coated', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh32.png' },
-  { id: 33, name: 'Hoe', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh33.png' },
-  { id: 34, name: 'Karasumaru', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh34.png' },
-  { id: 35, name: 'Liberal Hind', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh35.png' },
-  { id: 36, name: 'Thousand Sunny 4th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh36.png' },
-  { id: 37, name: 'Oro Jackson', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh37.png' },
-  { id: 38, name: 'Thousand Sunny 5th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh38.png' },
-  { id: 39, name: 'Numancia Flamingo', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh39.png' },
-  { id: 40, name: 'Piece of Spadille', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh40.png' },
-  { id: 41, name: 'Blackbeard\'s Raft', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh41.png' },
-  { id: 42, name: 'Victoria Punk', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh42.png' },
-  { id: 43, name: 'Thousand Sunny 6th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh43.png' },
-  { id: 44, name: 'Saber of Xebec', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh44.png' },
-  { id: 45, name: 'Thousand Sunny 7th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh45.png' },
-  { id: 46, name: 'Grand Fleet Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh46.png' },
-  { id: 47, name: 'Thousand Sunny 8th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh47.png' },
-  { id: 48, name: 'Laboon', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh48.png' },
-  { id: 49, name: 'Thousand Sunny 9th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh49.png' },
-  { id: 50, name: 'Thousand Sunny Wano', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh50.png' },
-  { id: 51, name: 'Shark Superb', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh51.png' },
-  { id: 52, name: 'Thousand Sunny 10th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh52.png' },
-  { id: 53, name: 'Bege Castle', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh53.png' },
-  { id: 54, name: 'Master Catfish', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh54.png' },
-  { id: 55, name: 'Yonta Maria', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh55.png' },
-  { id: 56, name: 'Pluton', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh56.png' },
-  { id: 57, name: 'Thousand Sunny 11th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh57.png' },
-  { id: 58, name: 'Bald Parrot', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh58.png' },
-  { id: 59, name: 'Iron Pirate Franky Shogun', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh59.png' },
-  { id: 60, name: 'Kidmaru', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh60.png' },
+  { id: 1, name: 'Dinghy', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh1.png',
+    boost: 'Boosts ATK of all characters by 1.2x and their HP by 1.2x' },
+  { id: 2, name: 'Merry Go', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh2.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.3x' },
+  { id: 3, name: 'Coffin Boat', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh3.png',
+    boost: 'Boosts ATK of Slasher characters by 1.5x, their HP by 1.3x, reduces crew\'s HP by 10% at the end of each turn' },
+  { id: 4, name: 'Miss Love Duck', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh4.png',
+    boost: 'Boosts ATK of Striker characters by 1.5x and their HP by 1.3x' },
+  { id: 5, name: 'Baratie', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh5.png',
+    boost: 'Boosts ATK of QCK characters by 1.5x and their HP by 1.1x, recovers 500 HP at end of each turn' },
+  { id: 6, name: 'Moby Dick', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh6.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.4x, cuts crew\'s HP by 50% at start of quest' },
+  { id: 7, name: 'Marine Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh7.png',
+    boost: 'Boosts ATK of Shooter characters by 1.5x, their HP by 1.2x, and recovers 300 HP at end of each turn' },
+  { id: 8, name: 'Thousand Sunny', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh8.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.3x',
+    special: 'Deals 50,000 fixed damage to all enemies (15 turns)' },
+  { id: 9, name: 'Bezan Black', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh9.png',
+    boost: 'Boosts ATK of QCK characters by 1.5x, their HP by 1.1x' },
+  { id: 10, name: 'Aokiji Bicycle', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh10.png',
+    boost: 'Boosts ATK of Striker and Free Spirit characters by 1.5x, their HP by 1.2x' },
+  { id: 11, name: 'Big Top', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh11.png',
+    boost: 'Boosts ATK of characters with 20 cost or less by 1.5x and their HP by 1.3x' },
+  { id: 12, name: 'Striker', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh12.png',
+    boost: 'Boosts ATK of Driven characters by 1.5x and their HP by 1.2x' },
+  { id: 13, name: 'Red Force', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh13.png',
+    boost: 'Boosts ATK of Cerebral and Free Spirit characters by 1.5x, their HP by 1.25x',
+    special: 'Reduces Bind and Despair duration by 2 turns (15 turns)' },
+  { id: 14, name: 'Kuja Pirate Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh14.png',
+    boost: 'Boosts ATK of Free Spirit and Fighter characters by 1.5x, their HP by 1.25x, recovers 700 HP at end of each turn' },
+  { id: 15, name: 'Rocketman', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh15.png',
+    boost: 'Boosts ATK of Powerhouse characters by 1.55x, their HP by 1.2x, reduces crew\'s HP by 10% at the end of each turn' },
+  { id: 16, name: 'Ark Maxim', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh16.png',
+    boost: 'Boosts ATK of PSY and QCK characters by 1.5x, their HP by 1.2x' },
+  { id: 17, name: 'Sexy Foxy', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh17.png',
+    boost: 'Boosts ATK of Cerebral characters by 1.5x and their HP by 1.25x' },
+  { id: 18, name: 'Thriller Bark', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh18.png',
+    boost: 'Boosts ATK of Driven and Powerhouse characters by 1.5x and their HP by 1.25x' },
+  { id: 19, name: 'Donquixote Pirates Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh19.png',
+    boost: 'Boosts ATK of Driven characters by 1.55x and their HP by 1.25x' },
+  { id: 20, name: 'Sun Pirates Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh20.png',
+    boost: 'Boosts ATK of Fighter characters by 1.55x and their HP by 1.25x' },
+  { id: 21, name: 'Garp\'s Warship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh21.png',
+    boost: 'Reduces Powerhouse characters\' Special charge time by 1 turn at start of quest, boosts their ATK by 1.85x, cuts crew\'s HP by 30%, reduces crew\'s Paralysis duration by 1 turn, and heals HP at end of turn (more depending on number of Powerhouses in crew; up to 2500 HP)' },
+  { id: 22, name: 'Polar Tang', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh22.png',
+    boost: 'Boosts ATK of Slasher and Free Spirit characters by 1.5x and their HP by 1.25x',
+    special: 'Reduces Bind and Despair duration by 3 turns (15 turns)' },
+  { id: 23, name: 'Nostra Castello', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh23.png',
+    boost: 'Boosts ATK of Driven characters by 1.56x and their HP by 1.25x, reduces crew\'s HP by 5% at end of each turn' },
+  { id: 24, name: 'Zunesha', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh24.png',
+    boost: 'Boosts ATK of Powerhouse and Cerebral characters by 1.55x and their HP by 1.25x, makes TND and RCV orbs beneficial for Powerhouse and Cerebral characters' },
+  { id: 25, name: 'Going Luffy Senpai', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh25.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.25x, boosts EXP gained by 1.5x' },
+  { id: 26, name: 'Thousand Sunny 2nd Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh26.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 27, name: 'Flying Dutchman', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh27.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.25x, boosts EXP gained by 1.5x' },
+  { id: 28, name: 'Germa 66 Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh28.png',
+    boost: 'Boosts ATK of Powerhouse characters by 1.55x, their HP by 1.25x, reduces Special charge time of Powerhouse characters by 1 turn at start of quest' },
+  { id: 29, name: 'Thousand Sunny 3rd Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh29.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 30, name: 'Queen Mama Chanter', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh30.png',
+    boost: 'Boosts ATK of Powerhouse and Cerebral characters by 1.55x and their HP by 1.3x' },
+  { id: 31, name: 'Megalo', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh31.png',
+    boost: 'Boosts ATK of Free Spirit and Fighter characters by 1.55x and their HP by 1.3x' },
+  { id: 32, name: 'Thousand Sunny Coated', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh32.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 33, name: 'Hoe', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh33.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.25x, boosts EXP gained by 1.75x' },
+  { id: 34, name: 'Karasumaru', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh34.png',
+    boost: 'Boosts ATK of Free Spirit characters by 1.55x and their HP by 1.3x' },
+  { id: 35, name: 'Liberal Hind', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh35.png',
+    boost: 'Boosts ATK of Cerebral and Driven characters by 1.55x and their HP by 1.3x' },
+  { id: 36, name: 'Thousand Sunny 4th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh36.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 37, name: 'Oro Jackson', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh37.png',
+    boost: 'Boosts ATK of all characters by 1.55x, their HP by 1.3x, and makes RCV and TND orbs beneficial for all characters' },
+  { id: 38, name: 'Thousand Sunny 5th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh38.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 39, name: 'Numancia Flamingo', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh39.png',
+    boost: 'Boosts ATK of Slasher characters by 1.55x, their HP by 1.3x' },
+  { id: 40, name: 'Piece of Spadille', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh40.png',
+    boost: 'Boosts ATK of Striker and Shooter characters by 1.55x and their HP by 1.3x' },
+  { id: 41, name: 'Blackbeard\'s Raft', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh41.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.3x, reduces crew\'s HP by 20% at start of quest' },
+  { id: 42, name: 'Victoria Punk', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh42.png',
+    boost: 'Boosts ATK of STR, DEX and QCK characters by 1.55x and their HP by 1.3x' },
+  { id: 43, name: 'Thousand Sunny 6th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh43.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 44, name: 'Saber of Xebec', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh44.png',
+    boost: 'Boosts ATK of all characters by 1.6x and their HP by 1.25x, reduces crew\'s HP by 10% at the end of each turn' },
+  { id: 45, name: 'Thousand Sunny 7th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh45.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 46, name: 'Grand Fleet Ship', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh46.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.3x' },
+  { id: 47, name: 'Thousand Sunny 8th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh47.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 48, name: 'Laboon', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh48.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.3x' },
+  { id: 49, name: 'Thousand Sunny 9th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh49.png',
+    boost: 'Boosts ATK of all characters by 1.5x and their HP by 1.35x' },
+  { id: 50, name: 'Thousand Sunny Wano', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh50.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.3x' },
+  { id: 51, name: 'Shark Superb', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh51.png',
+    boost: 'Boosts ATK of Slasher and Driven characters by 1.55x and their HP by 1.3x' },
+  { id: 52, name: 'Thousand Sunny 10th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh52.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.35x' },
+  { id: 53, name: 'Bege Castle', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh53.png',
+    boost: 'Boosts ATK of Shooter and Driven characters by 1.55x and their HP by 1.3x' },
+  { id: 54, name: 'Master Catfish', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh54.png',
+    boost: 'Boosts ATK of Fighter characters by 1.55x and their HP by 1.3x' },
+  { id: 55, name: 'Yonta Maria', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh55.png',
+    boost: 'Boosts ATK of Striker and Powerhouse characters by 1.55x and their HP by 1.3x' },
+  { id: 56, name: 'Pluton', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh56.png',
+    boost: 'Boosts ATK of all characters by 1.6x and their HP by 1.3x' },
+  { id: 57, name: 'Thousand Sunny 11th Anni', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh57.png',
+    boost: 'Boosts ATK of all characters by 1.55x and their HP by 1.35x' },
+  { id: 58, name: 'Bald Parrot', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh58.png',
+    boost: 'Boosts ATK of Cerebral and Free Spirit characters by 1.55x and their HP by 1.3x' },
+  { id: 59, name: 'Iron Pirate Franky Shogun', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh59.png',
+    boost: 'Boosts ATK of Powerhouse and Shooter characters by 1.55x and their HP by 1.3x' },
+  { id: 60, name: 'Kidmaru', thumbnail: 'https://img.gamewith.jp/article_tools/onepiece/gacha/sh60.png',
+    boost: 'Boosts ATK of Striker characters by 1.6x and their HP by 1.3x' },
 ];
 
 export function searchShips(query: string): Ship[] {
   if (!query || query.length < 1) return SHIPS;
   const lower = query.toLowerCase();
   return SHIPS.filter(s => s.name.toLowerCase().includes(lower));
+}
+
+export function getShipByName(name: string): Ship | null {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  return SHIPS.find(s => s.name.toLowerCase() === lower) ||
+         SHIPS.find(s => s.name.toLowerCase().includes(lower)) ||
+         null;
 }

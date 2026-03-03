@@ -2,9 +2,12 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import StageCard from '@/components/StageCard';
 import StageTypeBadge from '@/components/StageTypeBadge';
-import { Stage, STAGE_TYPES } from '@/types/database';
+import { Stage, Team, TeamUnit, STAGE_TYPES } from '@/types/database';
+import TeamCard from '@/components/TeamCard';
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 60;
+
+type TeamWithUnits = Team & { units: TeamUnit[] };
 
 async function getRecentStages(): Promise<Stage[]> {
   const { data, error } = await supabase
@@ -12,21 +15,13 @@ async function getRecentStages(): Promise<Stage[]> {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(8);
-
-  if (error) {
-    console.error('Error fetching stages:', error);
-    return [];
-  }
+  if (error) { console.error('Error fetching stages:', error); return []; }
   return (data as Stage[]) || [];
 }
 
 async function getStageCounts(): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from('stages')
-    .select('type');
-
+  const { data, error } = await supabase.from('stages').select('type');
   if (error) return {};
-
   const counts: Record<string, number> = {};
   (data as { type: string }[]).forEach((stage) => {
     counts[stage.type] = (counts[stage.type] || 0) + 1;
@@ -34,10 +29,32 @@ async function getStageCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
+async function getRecentTeams(): Promise<TeamWithUnits[]> {
+  const { data: teamsData, error } = await (supabase as any)
+    .from('teams')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(4);
+
+  if (error || !teamsData || teamsData.length === 0) return [];
+
+  const teamIds = (teamsData as Team[]).map(t => t.id);
+  const { data: unitsData } = await (supabase as any)
+    .from('team_units')
+    .select('*')
+    .in('team_id', teamIds);
+
+  return (teamsData as Team[]).map(team => ({
+    ...team,
+    units: ((unitsData as TeamUnit[]) || []).filter(u => u.team_id === team.id),
+  }));
+}
+
 export default async function HomePage() {
-  const [recentStages, stageCounts] = await Promise.all([
+  const [recentStages, stageCounts, recentTeams] = await Promise.all([
     getRecentStages(),
     getStageCounts(),
+    getRecentTeams(),
   ]);
 
   const totalStages = Object.values(stageCounts).reduce((a, b) => a + b, 0);
@@ -75,6 +92,20 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Latest Teams */}
+      {recentTeams.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-optc-text">Latest Teams</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {recentTeams.map((team) => (
+              <TeamCard key={team.id} team={team} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Stage Types Overview */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h2 className="text-2xl font-bold text-optc-text mb-6">Browse by Type</h2>
@@ -111,17 +142,6 @@ export default async function HomePage() {
           {recentStages.map((stage) => (
             <StageCard key={stage.id} stage={stage} />
           ))}
-        </div>
-      </section>
-
-      {/* Coming Soon / Info */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-optc-bg-card border border-optc-border rounded-2xl p-8 text-center">
-          <h2 className="text-xl font-bold text-optc-text mb-3">🚧 More Features Coming Soon</h2>
-          <p className="text-optc-text-secondary max-w-lg mx-auto">
-            Team sharing, box management, team matching, and AI-powered suggestions
-            are in development. Stay tuned!
-          </p>
         </div>
       </section>
     </div>
