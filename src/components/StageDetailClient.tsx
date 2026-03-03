@@ -174,7 +174,7 @@ export default function StageDetailClient({ stageId }: StageDetailClientProps) {
         </div>
 
         {sortedTeams.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {sortedTeams.map((team) => (
               <TeamCard key={team.id} team={team} />
             ))}

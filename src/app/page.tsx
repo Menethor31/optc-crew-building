@@ -34,7 +34,7 @@ async function getRecentTeams(): Promise<TeamWithUnits[]> {
     .from('teams')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(4);
+    .limit(3);
 
   if (error || !teamsData || teamsData.length === 0) return [];
 
@@ -98,7 +98,7 @@ export default async function HomePage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-optc-text">Latest Teams</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {recentTeams.map((team) => (
               <TeamCard key={team.id} team={team} />
             ))}

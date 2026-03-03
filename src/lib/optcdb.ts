@@ -23,8 +23,8 @@ function getPrimaryType(type: string): string {
   return type.split('/')[0].trim().toUpperCase();
 }
 
-export function getTypeColor(type: string): string {
-  switch (getPrimaryType(type)) {
+function getSingleTypeColor(t: string): string {
+  switch (t.trim().toUpperCase()) {
     case 'STR': return '#E74C3C';
     case 'DEX': return '#2ECC71';
     case 'QCK': return '#3498DB';
@@ -32,6 +32,34 @@ export function getTypeColor(type: string): string {
     case 'INT': return '#9B59B6';
     default: return '#8B949E';
   }
+}
+
+export function getTypeColor(type: string): string {
+  return getSingleTypeColor(getPrimaryType(type));
+}
+
+// Returns [color1, color2] for dual types, or [color1] for single
+export function getTypeColors(type: string): string[] {
+  if (!type) return ['#8B949E'];
+  const parts = type.split('/');
+  if (parts.length >= 2) {
+    return [getSingleTypeColor(parts[0]), getSingleTypeColor(parts[1])];
+  }
+  return [getSingleTypeColor(parts[0])];
+}
+
+// Returns CSS style for border — gradient for dual types
+export function getDualTypeBorderStyle(type: string): Record<string, string> {
+  const colors = getTypeColors(type);
+  if (colors.length >= 2) {
+    return {
+      border: '2px solid transparent',
+      backgroundImage: `linear-gradient(#1C2333, #1C2333), linear-gradient(135deg, ${colors[0]}, ${colors[1]})`,
+      backgroundOrigin: 'border-box',
+      backgroundClip: 'padding-box, border-box',
+    };
+  }
+  return { borderColor: colors[0], borderWidth: '2px', borderStyle: 'solid' };
 }
 
 export function getTypeBgClass(type: string): string {

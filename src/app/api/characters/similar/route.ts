@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
       const charEffects = extractEffects(special);
       const score = similarityScore(sourceEffects, charEffects);
 
-      if (score >= 0.3) { // At least 30% similarity
+      if (score >= 0.15) { // At least 15% similarity - client does further filtering
         const unit = units[charId];
         const stars = unit ? (parseInt(unit.stars) || 0) : 0;
         // Prioritize higher rarity characters

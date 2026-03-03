@@ -4,12 +4,34 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Team, TeamUnit, TeamGuide, Stage } from '@/types/database';
-import { getCharacterThumbnail, getTypeColor, getShipByName } from '@/lib/optcdb';
+import { getCharacterThumbnail, getTypeColor, getShipByName, getDualTypeBorderStyle } from '@/lib/optcdb';
 import CharacterTooltip from './CharacterTooltip';
 import ShipTooltip from './ShipTooltip';
 import SimilarCharacters from './SimilarCharacters';
 
 interface TeamDetailClientProps { teamId: string; }
+
+// Shared cache for character types
+const typeCache: Record<number, string> = {};
+
+function useCharType(unitId: number) {
+  const [charType, setCharType] = useState<string>(typeCache[unitId] || '');
+  useEffect(() => {
+    if (typeCache[unitId]) { setCharType(typeCache[unitId]); return; }
+    let cancelled = false;
+    fetch(`/api/characters/details?id=${unitId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.type && !cancelled) {
+          typeCache[unitId] = data.type;
+          setCharType(data.type);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [unitId]);
+  return charType;
+}
 
 export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   const [team, setTeam] = useState<Team | null>(null);
@@ -42,14 +64,16 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   function handleImgError(id: number) { setImgErrors((prev) => new Set(prev).add(id)); }
 
   function UnitPortrait({ unitId, supportId, label }: { unitId: number; supportId?: number | null; label: string }) {
+    const charType = useCharType(unitId);
+    const borderStyle = charType ? getDualTypeBorderStyle(charType) : { borderColor: '#8B949E', borderWidth: '2px', borderStyle: 'solid' };
+
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="relative">
-          {/* Similar characters button */}
           <SimilarCharacters unitId={unitId} />
 
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border-2 relative cursor-pointer"
-            style={{ borderColor: getTypeColor('') }}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden relative cursor-pointer"
+            style={borderStyle}
             onClick={() => setActiveTooltip(activeTooltip === unitId ? null : unitId)}>
             {!imgErrors.has(unitId) ? (
               <img src={getCharacterThumbnail(unitId)} alt={`Unit ${unitId}`}
@@ -63,7 +87,7 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
               style={{ borderColor: getTypeColor('') }}
               onClick={(e) => { e.stopPropagation(); setActiveTooltip(activeTooltip === supportId ? null : supportId); }}>
               {!imgErrors.has(supportId) ? (
-                <img src={getCharacterThumbnail(supportId)} alt={`Support`}
+                <img src={getCharacterThumbnail(supportId)} alt="Support"
                   className="w-full h-full object-cover" onError={() => handleImgError(supportId)} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[8px]">S</div>
@@ -98,7 +122,6 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
                 <span className="text-2xl">🚢</span>
               </div>
             )}
-            {/* Name overlay */}
             <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
               <p className="text-white text-[8px] leading-tight truncate text-center">{shipName}</p>
             </div>
@@ -152,14 +175,11 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
         <h2 className="text-xl font-bold text-optc-text mb-4">Team</h2>
         <div className="bg-optc-bg-card border border-optc-border rounded-2xl p-6">
           <div className="flex gap-6 items-start">
-            {/* Ship slot */}
             {team.ship && (
               <div className="flex-shrink-0">
                 <ShipPortrait shipName={team.ship} />
               </div>
             )}
-
-            {/* Team grid */}
             <div className="flex-1 space-y-4">
               {rows.map((row, rowIdx) => (
                 <div key={rowIdx} className="flex justify-center gap-8 sm:gap-16">
