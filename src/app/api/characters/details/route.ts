@@ -138,6 +138,52 @@ function extractDetail(detail: any): any {
     }
   }
 
+  // Support ability
+  if (detail.support) {
+    try {
+      if (Array.isArray(detail.support)) {
+        const supportEntries: string[] = [];
+        for (let i = 0; i < detail.support.length; i++) {
+          const s = detail.support[i];
+          let chars = '';
+          let text = '';
+
+          // Characters supported
+          if (s.Characters) {
+            chars = typeof s.Characters === 'string' ? s.Characters : String(s.Characters);
+          }
+
+          // Support text - get highest level (usually key 4 or 5)
+          if (s.Text) {
+            if (typeof s.Text === 'string') {
+              text = s.Text;
+            } else {
+              // Object with level keys: try 5, 4, 3, 2, 1, 0
+              const levels = [5, 4, 3, 2, 1, 0];
+              for (let l = 0; l < levels.length; l++) {
+                if (s.Text[levels[l]]) {
+                  text = s.Text[levels[l]];
+                  break;
+                }
+              }
+            }
+          }
+
+          if (chars && text) {
+            supportEntries.push(`Supported: ${chars}\nLevel 5: ${text}`);
+          } else if (text) {
+            supportEntries.push(text);
+          }
+        }
+        if (supportEntries.length > 0) {
+          result.support = supportEntries.join('\n\n');
+        }
+      }
+    } catch (e) {
+      // Ignore parse errors for support
+    }
+  }
+
   return result;
 }
 

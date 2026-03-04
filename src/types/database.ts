@@ -118,7 +118,7 @@ export const STAGE_TYPES: StageType[] = [
 
 // Colors for stage type badges
 export const STAGE_TYPE_COLORS: Record<StageType, string> = {
-  'Story': 'bg-gray-600',
+  'Story': 'bg-sky-700',
   'Fortnight': 'bg-teal-600',
   'Weekly': 'bg-slate-600',
   'Raid': 'bg-red-700',

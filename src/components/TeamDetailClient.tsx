@@ -11,7 +11,6 @@ import SimilarCharacters from './SimilarCharacters';
 
 interface TeamDetailClientProps { teamId: string; }
 
-// Shared cache for character types
 const typeCache: Record<number, string> = {};
 
 function useCharType(unitId: number) {
@@ -40,7 +39,7 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   const [stage, setStage] = useState<Stage | null>(null);
   const [loading, setLoading] = useState(true);
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
-  const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null); // "unit-123" or "support-123"
   const [showShipTooltip, setShowShipTooltip] = useState(false);
   const [shipImgError, setShipImgError] = useState(false);
 
@@ -66,15 +65,16 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
   function UnitPortrait({ unitId, supportId, label }: { unitId: number; supportId?: number | null; label: string }) {
     const charType = useCharType(unitId);
     const borderStyle = charType ? getDualTypeBorderStyle(charType) : { borderColor: '#8B949E', borderWidth: '2px', borderStyle: 'solid' };
+    const unitKey = `unit-${unitId}`;
+    const supportKey = supportId ? `support-${supportId}` : '';
 
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="relative">
           <SimilarCharacters unitId={unitId} />
-
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden relative cursor-pointer"
             style={borderStyle}
-            onClick={() => setActiveTooltip(activeTooltip === unitId ? null : unitId)}>
+            onClick={() => setActiveTooltip(activeTooltip === unitKey ? null : unitKey)}>
             {!imgErrors.has(unitId) ? (
               <img src={getCharacterThumbnail(unitId)} alt={`Unit ${unitId}`}
                 className="w-full h-full object-cover" onError={() => handleImgError(unitId)} />
@@ -85,7 +85,7 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
           {supportId && (
             <div className="absolute -bottom-1 -right-1 w-8 h-8 sm:w-9 sm:h-9 rounded border-2 overflow-hidden bg-optc-bg-card cursor-pointer"
               style={{ borderColor: getTypeColor('') }}
-              onClick={(e) => { e.stopPropagation(); setActiveTooltip(activeTooltip === supportId ? null : supportId); }}>
+              onClick={(e) => { e.stopPropagation(); setActiveTooltip(activeTooltip === supportKey ? null : supportKey); }}>
               {!imgErrors.has(supportId) ? (
                 <img src={getCharacterThumbnail(supportId)} alt="Support"
                   className="w-full h-full object-cover" onError={() => handleImgError(supportId)} />
@@ -94,43 +94,14 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
               )}
             </div>
           )}
-          {activeTooltip === unitId && (
+          {activeTooltip === unitKey && (
             <CharacterTooltip unitId={unitId} position="above" onClose={() => setActiveTooltip(null)} />
           )}
-          {supportId && activeTooltip === supportId && (
-            <CharacterTooltip unitId={supportId} position="above" onClose={() => setActiveTooltip(null)} />
+          {supportId && activeTooltip === supportKey && (
+            <CharacterTooltip unitId={supportId} isSupport={true} position="above" onClose={() => setActiveTooltip(null)} />
           )}
         </div>
         <p className="text-optc-text-secondary text-[10px] sm:text-xs font-medium text-center">{label}</p>
-      </div>
-    );
-  }
-
-  function ShipPortrait({ shipName }: { shipName: string }) {
-    const shipData = getShipByName(shipName);
-    return (
-      <div className="flex flex-col items-center gap-1">
-        <div className="relative">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border-2 border-optc-border relative cursor-pointer bg-optc-bg-card"
-            onClick={() => setShowShipTooltip(!showShipTooltip)}>
-            {shipData && !shipImgError ? (
-              <img src={shipData.thumbnail} alt={shipName}
-                className="w-full h-full object-cover"
-                onError={() => setShipImgError(true)} />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover">
-                <span className="text-2xl">🚢</span>
-              </div>
-            )}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
-              <p className="text-white text-[8px] leading-tight truncate text-center">{shipName}</p>
-            </div>
-          </div>
-          {showShipTooltip && (
-            <ShipTooltip shipName={shipName} position="above" onClose={() => setShowShipTooltip(false)} />
-          )}
-        </div>
-        <p className="text-optc-text-secondary text-[10px] sm:text-xs font-medium text-center">Ship</p>
       </div>
     );
   }
@@ -151,6 +122,8 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
     sortedUnits.filter(u => u.position >= 5 && u.position <= 6),
   ];
 
+  const shipData = team.ship ? getShipByName(team.ship) : null;
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <nav className="mb-6 text-sm">
@@ -162,34 +135,51 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
         </ol>
       </nav>
 
+      {/* Header — with ship */}
       <div className="bg-optc-bg-card border border-optc-border rounded-2xl p-6 sm:p-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-optc-text">{team.name}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-optc-text-secondary">
-          <span>by {team.submitted_by}</span>
-          {team.video_url && <a href={team.video_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">&bull; 📹 YouTube</a>}
+        <div className="flex items-start gap-5">
+          {/* Ship thumbnail */}
+          {team.ship && (
+            <div className="flex-shrink-0 relative">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 border-optc-border cursor-pointer bg-optc-bg-hover"
+                onClick={() => setShowShipTooltip(!showShipTooltip)}>
+                {shipData && !shipImgError ? (
+                  <img src={shipData.thumbnail} alt={team.ship} className="w-full h-full object-cover"
+                    onError={() => setShipImgError(true)} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center"><span className="text-2xl">🚢</span></div>
+                )}
+              </div>
+              <p className="text-optc-text-secondary text-[9px] text-center mt-1 truncate max-w-[80px]">{team.ship}</p>
+              {showShipTooltip && (
+                <ShipTooltip shipName={team.ship} position="below" onClose={() => setShowShipTooltip(false)} />
+              )}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-optc-text">{team.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-optc-text-secondary">
+              <span>by {team.submitted_by}</span>
+              {team.video_url && <a href={team.video_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">&bull; 📹 YouTube</a>}
+            </div>
+            {team.description && <p className="mt-3 text-optc-text-secondary text-sm">{team.description}</p>}
+          </div>
         </div>
-        {team.description && <p className="mt-4 text-optc-text-secondary text-sm">{team.description}</p>}
       </div>
 
+      {/* Team grid */}
       <div className="mt-8">
         <h2 className="text-xl font-bold text-optc-text mb-4">Team</h2>
         <div className="bg-optc-bg-card border border-optc-border rounded-2xl p-6">
-          <div className="flex gap-6 items-start">
-            {team.ship && (
-              <div className="flex-shrink-0">
-                <ShipPortrait shipName={team.ship} />
+          <div className="space-y-4">
+            {rows.map((row, rowIdx) => (
+              <div key={rowIdx} className="flex justify-center gap-8 sm:gap-16">
+                {row.map((unit) => (
+                  <UnitPortrait key={unit.position} unitId={unit.unit_id} supportId={unit.support_id} label={positionLabels[unit.position - 1]} />
+                ))}
+                {row.length < 2 && <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg border-2 border-dashed border-optc-border/30" />}
               </div>
-            )}
-            <div className="flex-1 space-y-4">
-              {rows.map((row, rowIdx) => (
-                <div key={rowIdx} className="flex justify-center gap-8 sm:gap-16">
-                  {row.map((unit) => (
-                    <UnitPortrait key={unit.position} unitId={unit.unit_id} supportId={unit.support_id} label={positionLabels[unit.position - 1]} />
-                  ))}
-                  {row.length < 2 && <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg border-2 border-dashed border-optc-border/30" />}
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -205,11 +195,11 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
 
       {guides.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-bold text-optc-text mb-4">Stage-by-Stage Guide</h2>
+          <h2 className="text-xl font-bold text-optc-text mb-4">Turn-by-Turn Guide</h2>
           <div className="space-y-4">
             {guides.map((guide) => (
               <div key={guide.id} className="bg-optc-bg-card border border-optc-border rounded-xl p-5">
-                <h3 className="text-optc-accent font-bold text-sm mb-2">Stage {guide.stage_number}</h3>
+                <h3 className="text-optc-accent font-bold text-sm mb-2">Turn {guide.stage_number}</h3>
                 <div className="text-optc-text text-sm leading-relaxed whitespace-pre-wrap">{guide.description}</div>
               </div>
             ))}

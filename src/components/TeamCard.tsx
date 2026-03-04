@@ -22,15 +22,17 @@ export default function TeamCard({ team }: TeamCardProps) {
     const isFriend = unit.position === 2;
     const isSpecial = isCaptain || isFriend;
     return (
-      <div className="flex flex-col items-center gap-0.5">
-        {/* Label above */}
-        {isSpecial && (
-          <span className={`text-[7px] font-bold uppercase tracking-wider ${isCaptain ? 'text-red-400' : 'text-blue-400'}`}>
-            {isCaptain ? 'CPT' : 'GUEST'}
-          </span>
-        )}
+      <div className="flex flex-col items-center" style={{ width: isSpecial ? 48 : 44 }}>
+        {/* Label row — fixed height always reserved */}
+        <div className="h-3 flex items-center justify-center">
+          {isSpecial && (
+            <span className={`text-[7px] font-bold uppercase tracking-wider ${isCaptain ? 'text-red-400' : 'text-blue-400'}`}>
+              {isCaptain ? 'CPT' : 'GUEST'}
+            </span>
+          )}
+        </div>
         {/* Main unit */}
-        <div className={`relative rounded-lg overflow-hidden border-2 flex-shrink-0 ${isSpecial ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-10 h-10 sm:w-11 sm:h-11'}`}
+        <div className={`relative rounded-lg overflow-hidden border-2 flex-shrink-0 mt-0.5 ${isSpecial ? 'w-11 h-11 sm:w-12 sm:h-12' : 'w-10 h-10 sm:w-11 sm:h-11'}`}
           style={{ borderColor: isCaptain ? '#E74C3C' : isFriend ? '#3498DB' : getTypeColor('') }}>
           {!imgErrors.has(unit.unit_id) ? (
             <img src={getCharacterThumbnail(unit.unit_id)} alt={`Unit ${unit.unit_id}`}
@@ -39,17 +41,19 @@ export default function TeamCard({ team }: TeamCardProps) {
             <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-optc-text-secondary text-[8px]">{unit.unit_id}</div>
           )}
         </div>
-        {/* Support */}
-        {unit.support_id && (
-          <div className="w-5 h-5 rounded overflow-hidden border border-optc-border flex-shrink-0">
-            {!imgErrors.has(unit.support_id) ? (
-              <img src={getCharacterThumbnail(unit.support_id)} alt="S"
-                className="w-full h-full object-cover" onError={() => handleImgError(unit.support_id!)} />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[6px]">S</div>
-            )}
-          </div>
-        )}
+        {/* Support row — fixed height always reserved */}
+        <div className="h-5 mt-0.5 flex items-center justify-center">
+          {unit.support_id && (
+            <div className="w-5 h-5 rounded overflow-hidden border border-optc-border flex-shrink-0">
+              {!imgErrors.has(unit.support_id) ? (
+                <img src={getCharacterThumbnail(unit.support_id)} alt="S"
+                  className="w-full h-full object-cover" onError={() => handleImgError(unit.support_id!)} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-optc-bg-hover text-[6px]">S</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -69,7 +73,7 @@ export default function TeamCard({ team }: TeamCardProps) {
             <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full flex-shrink-0">📹</span>
           )}
         </div>
-        <div className="flex items-end justify-center gap-1 sm:gap-1.5">
+        <div className="flex items-start justify-center gap-0.5 sm:gap-1">
           {displayOrder.map((unit) => (
             <UnitMini key={unit.position} unit={unit} />
           ))}
