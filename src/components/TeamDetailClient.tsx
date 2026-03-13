@@ -8,6 +8,7 @@ import { getCharacterThumbnail, getTypeColor, getShipByName, getDualTypeBorderSt
 import CharacterTooltip from './CharacterTooltip';
 import ShipTooltip from './ShipTooltip';
 import SimilarCharacters from './SimilarCharacters';
+import VoteButton from './VoteButton';
 
 interface TeamDetailClientProps { teamId: string; }
 
@@ -163,6 +164,10 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
               {team.video_url && <a href={team.video_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">&bull; 📹 YouTube</a>}
             </div>
             {team.description && <p className="mt-3 text-optc-text-secondary text-sm">{team.description}</p>}
+          </div>
+          {/* Vote */}
+          <div className="flex-shrink-0">
+            <VoteButton teamId={team.id} initialScore={team.score || 0} />
           </div>
         </div>
       </div>

@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Score all other characters
-    const scores: { id: string; score: number; name: string; type: string; stars: number; effects: string[] }[] = [];
+    const scores: { id: string; score: number; name: string; type: string; charClass: string; stars: number; effects: string[] }[] = [];
 
     for (const [charId, detail] of Object.entries(details)) {
       if (charId === id) continue;
@@ -146,11 +146,26 @@ export async function GET(request: NextRequest) {
         // Prioritize higher rarity characters
         const adjustedScore = score + (stars >= 5 ? 0.05 : 0);
 
+        // Extract class
+        let charClass = '';
+        if (unit?.class) {
+          if (typeof unit.class === 'string') {
+            charClass = unit.class;
+          } else if (Array.isArray(unit.class)) {
+            if (Array.isArray(unit.class[0])) {
+              charClass = unit.class.map((c: any) => Array.isArray(c) ? c.join('/') : c).join(' & ');
+            } else {
+              charClass = unit.class.join('/');
+            }
+          }
+        }
+
         scores.push({
           id: charId,
           score: adjustedScore,
           name: unit?.name || `Unit #${charId}`,
           type: unit ? (Array.isArray(unit.type) ? unit.type.join('/') : (unit.type || '')) : '',
+          charClass,
           stars,
           effects: Array.from(charEffects).filter(e => sourceEffects.has(e)),
         });
