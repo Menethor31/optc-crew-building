@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { OPTCCharacter, Stage } from '@/types/database';
 import { Ship, getCharacterThumbnail } from '@/lib/optcdb';
+import { addMyTeam } from '@/lib/myTeams';
 import CharacterSearch from './CharacterSearch';
 import ShipSearch from './ShipSearch';
 
@@ -110,6 +111,7 @@ export default function TeamForm({ stage }: TeamFormProps) {
         team_id: (team as any).id, stage_number: t.turnNumber, description: compileTurnDescription(t), sort_order: i,
       }));
       if (gi.length) { const { error: ge } = await (supabase as any).from('team_guides').insert(gi); if (ge) throw new Error(ge.message); }
+      addMyTeam((team as any).id);
       router.push(`/teams/${(team as any).id}`); router.refresh();
     } catch (err) { setError(err instanceof Error ? err.message : 'Something went wrong.'); }
     finally { setSubmitting(false); }

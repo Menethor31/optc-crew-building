@@ -10,8 +10,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow access to the login API route
-  if (request.nextUrl.pathname === '/api/login') {
+  // Allow access to the login API route and other API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
