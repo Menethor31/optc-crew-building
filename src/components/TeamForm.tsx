@@ -11,9 +11,13 @@ import ShipSearch from './ShipSearch';
 
 interface TeamFormProps { stage: Stage; }
 
+// Actions: special (with order), switch (only dual), support
+type ActionType = '' | 'special' | 'switch' | 'support';
+
 interface TurnAction {
   unitIndex: number;
-  action: '' | 'special' | 'switch';
+  action: ActionType;
+  order: number; // for specials: 1, 2, 3...
 }
 
 interface GuideTurn {
@@ -23,6 +27,12 @@ interface GuideTurn {
 }
 
 const POSITION_LABELS = ['Captain', 'Friend Captain', 'Crew 1', 'Crew 2', 'Crew 3', 'Crew 4'];
+
+// Check if a character is dual (type has "/")
+function isDualUnit(unit: OPTCCharacter | null): boolean {
+  if (!unit) return false;
+  return (unit.type && unit.type.includes('/')) || false;
+}
 
 export default function TeamForm({ stage }: TeamFormProps) {
   const router = useRouter();
@@ -51,20 +61,54 @@ export default function TeamForm({ stage }: TeamFormProps) {
     setTurns(turns.filter((_, j) => j !== i).map((t, j) => ({ ...t, turnNumber: j + 1 })));
   }
 
+  // Get next special order number for a turn
+  function getNextSpecialOrder(turn: GuideTurn): number {
+    const specials = turn.actions.filter(a => a.action === 'special');
+    return specials.length > 0 ? Math.max(...specials.map(s => s.order)) + 1 : 1;
+  }
+
   function toggleUnitAction(turnIdx: number, unitIdx: number) {
     const newTurns = [...turns];
     const turn = { ...newTurns[turnIdx] };
+    const unit = units[unitIdx];
+    const hasSupport = !!supports[unitIdx];
+    const isDual = isDualUnit(unit);
     const existingIdx = turn.actions.findIndex(a => a.unitIndex === unitIdx);
+
     if (existingIdx >= 0) {
       const current = turn.actions[existingIdx].action;
-      if (current === 'special') {
-        turn.actions = [...turn.actions];
-        turn.actions[existingIdx] = { ...turn.actions[existingIdx], action: 'switch' };
+      // Cycle: special -> switch (if dual) -> support (if has support) -> off
+      let nextAction: ActionType = '';
+      if (current === 'special' && isDual) {
+        nextAction = 'switch';
+      } else if (current === 'special' && hasSupport) {
+        nextAction = 'support';
+      } else if (current === 'switch' && hasSupport) {
+        nextAction = 'support';
+      } else if (current === 'switch' || current === 'support') {
+        nextAction = ''; // off
       } else {
+        nextAction = ''; // off
+      }
+
+      if (nextAction === '') {
+        // Remove and reorder specials
         turn.actions = turn.actions.filter((_, i) => i !== existingIdx);
+        // Reorder remaining specials
+        let specialOrder = 1;
+        turn.actions = turn.actions.map(a => {
+          if (a.action === 'special') {
+            return { ...a, order: specialOrder++ };
+          }
+          return a;
+        });
+      } else {
+        turn.actions = [...turn.actions];
+        turn.actions[existingIdx] = { ...turn.actions[existingIdx], action: nextAction, order: nextAction === 'special' ? turn.actions[existingIdx].order : 0 };
       }
     } else {
-      turn.actions = [...turn.actions, { unitIndex: unitIdx, action: 'special' }];
+      const order = getNextSpecialOrder(turn);
+      turn.actions = [...turn.actions, { unitIndex: unitIdx, action: 'special', order }];
     }
     newTurns[turnIdx] = turn;
     setTurns(newTurns);
@@ -78,14 +122,23 @@ export default function TeamForm({ stage }: TeamFormProps) {
 
   function compileTurnDescription(turn: GuideTurn): string {
     const parts: string[] = [];
-    const activeActions = turn.actions.filter(a => a.action !== '');
-    if (activeActions.length > 0) {
-      const actionTexts = activeActions.map(a => {
+    // Sort by order for specials, then others
+    const sorted = [...turn.actions].filter(a => a.action !== '').sort((a, b) => {
+      if (a.action === 'special' && b.action === 'special') return a.order - b.order;
+      if (a.action === 'special') return -1;
+      if (b.action === 'special') return 1;
+      return 0;
+    });
+
+    if (sorted.length > 0) {
+      const actionTexts = sorted.map(a => {
         const unitName = units[a.unitIndex]?.name || POSITION_LABELS[a.unitIndex];
-        const actionLabel = a.action === 'special' ? 'Use Special' : 'Use Switch';
-        return unitName + ': ' + actionLabel;
-      });
-      parts.push(actionTexts.join(' | '));
+        if (a.action === 'special') return `[SPE${a.order}] ${unitName}: Use Special`;
+        if (a.action === 'switch') return `[SWI] ${unitName}: Use Switch`;
+        if (a.action === 'support') return `[SUP] ${unitName}: Use Support`;
+        return '';
+      }).filter(Boolean);
+      parts.push(actionTexts.join('\n'));
     }
     if (turn.note.trim()) {
       parts.push(turn.note.trim());
@@ -127,10 +180,28 @@ export default function TeamForm({ stage }: TeamFormProps) {
     { label: ['Crew 3', 'Crew 4'], indices: [4, 5] },
   ];
 
-  const activeUnits = units.map((u, i) => ({ unit: u, index: i })).filter(x => x.unit !== null);
+  const activeUnits = units.map((u, i) => ({ unit: u, index: i, hasSupport: !!supports[i], isDual: isDualUnit(u) })).filter(x => x.unit !== null);
+
+  // Build action label with colors
+  function getActionDisplay(action: TurnAction | undefined, isDual: boolean, hasSupport: boolean) {
+    if (!action || action.action === '') return { label: '', color: '' };
+    if (action.action === 'special') return { label: `SPE${action.order}`, color: 'border-optc-accent bg-optc-accent/15 text-optc-accent' };
+    if (action.action === 'switch') return { label: 'SWI', color: 'border-blue-500 bg-blue-500/15 text-blue-400' };
+    if (action.action === 'support') return { label: 'SUP', color: 'border-emerald-500 bg-emerald-500/15 text-emerald-400' };
+    return { label: '', color: '' };
+  }
+
+  // Build tooltip text
+  function getToggleTitle(isDual: boolean, hasSupport: boolean) {
+    const steps = ['Special'];
+    if (isDual) steps.push('Switch');
+    if (hasSupport) steps.push('Support');
+    steps.push('Off');
+    return 'Click to cycle: ' + steps.join(' > ');
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-optc-bg-card border border-optc-border rounded-2xl p-6">
+    <form onSubmit={handleSubmit} className="bg-optc-bg-card border border-optc-border rounded-2xl p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-optc-text">Submit a Team</h3>
         <button type="button" onClick={() => setIsOpen(false)} className="text-optc-text-secondary hover:text-optc-text">
@@ -138,6 +209,7 @@ export default function TeamForm({ stage }: TeamFormProps) {
         </button>
       </div>
 
+      {/* Info */}
       <div className="space-y-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -161,19 +233,20 @@ export default function TeamForm({ stage }: TeamFormProps) {
         </div>
       </div>
 
+      {/* Team Composition */}
       <div className="mb-6">
         <h4 className="text-sm font-bold text-optc-text mb-3">Team Composition</h4>
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-4 sm:gap-6 items-start">
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <span className="text-[10px] text-optc-text-secondary font-medium">Ship</span>
             <ShipSearch onSelect={setSelectedShip} selectedShip={selectedShip} />
           </div>
           <div className="flex-1 space-y-2">
             {compRows.map((row, rowIdx) => (
-              <div key={rowIdx} className="flex justify-center gap-4 sm:gap-6">
+              <div key={rowIdx} className="flex justify-center gap-3 sm:gap-6">
                 {row.indices.map((idx, colIdx) => (
                   <div key={idx} className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] text-optc-text-secondary font-medium">{row.label[colIdx]}</span>
+                    <span className="text-[9px] sm:text-[10px] text-optc-text-secondary font-medium">{row.label[colIdx]}</span>
                     <div className="flex items-end gap-1">
                       <CharacterSearch onSelect={(c) => handleUnitSelect(idx, c)} selectedId={units[idx]?.id} placeholder="Search..." />
                       <CharacterSearch onSelect={(c) => handleSupportSelect(idx, c)} selectedId={supports[idx]?.id} placeholder="+" compact={true} />
@@ -186,9 +259,18 @@ export default function TeamForm({ stage }: TeamFormProps) {
         </div>
       </div>
 
+      {/* Turn-by-Turn Guide */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-bold text-optc-text">Turn-by-Turn Guide</h4>
+          <div>
+            <h4 className="text-sm font-bold text-optc-text">Turn-by-Turn Guide</h4>
+            <p className="text-[9px] text-optc-text-secondary mt-0.5">
+              Click portraits to cycle: <span className="text-optc-accent">SPE</span>
+              {activeUnits.some(u => u.isDual) && <> → <span className="text-blue-400">SWI</span></>}
+              {activeUnits.some(u => u.hasSupport) && <> → <span className="text-emerald-400">SUP</span></>}
+              → Off
+            </p>
+          </div>
           <button type="button" onClick={addTurn} className="text-xs text-optc-accent hover:text-optc-accent-hover font-medium">+ Add Turn</button>
         </div>
 
@@ -197,51 +279,57 @@ export default function TeamForm({ stage }: TeamFormProps) {
         )}
 
         <div className="space-y-3">
-          {turns.map((turn, turnIdx) => (
-            <div key={turnIdx} className="bg-optc-bg border border-optc-border rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-optc-accent">Turn {turn.turnNumber}</span>
-                {turns.length > 1 && (
-                  <button type="button" onClick={() => removeTurn(turnIdx)} className="text-optc-text-secondary hover:text-optc-accent text-[10px]">Remove</button>
-                )}
-              </div>
+          {turns.map((turn, turnIdx) => {
+            // Count specials for this turn to show ordering
+            const specialCount = turn.actions.filter(a => a.action === 'special').length;
 
-              {activeUnits.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {activeUnits.map(({ unit, index }) => {
-                    const action = turn.actions.find(a => a.unitIndex === index);
-                    const actionLabel = action?.action === 'special' ? 'SPE' : action?.action === 'switch' ? 'SWI' : '';
-                    return (
-                      <button key={index} type="button"
-                        onClick={() => toggleUnitAction(turnIdx, index)}
-                        className={`flex items-center gap-1 px-1.5 py-1 rounded-lg border text-[10px] transition-all ${
-                          action?.action === 'special'
-                            ? 'border-optc-accent bg-optc-accent/15 text-optc-accent'
-                            : action?.action === 'switch'
-                              ? 'border-blue-500 bg-blue-500/15 text-blue-400'
-                              : 'border-optc-border/50 bg-optc-bg-hover/50 text-optc-text-secondary hover:border-optc-border'
-                        }`}
-                        title={POSITION_LABELS[index] + ': click to cycle Special > Switch > Off'}>
-                        <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 border border-optc-border/50">
-                          {!imgErrors.has(unit!.id) ? (
-                            <img src={getCharacterThumbnail(unit!.id)} alt="" className="w-full h-full object-cover"
-                              onError={() => handleImgError(unit!.id)} />
-                          ) : (
-                            <div className="w-full h-full bg-optc-bg-hover text-[6px] flex items-center justify-center">{unit!.id}</div>
-                          )}
-                        </div>
-                        {actionLabel && <span className="font-bold">{actionLabel}</span>}
-                      </button>
-                    );
-                  })}
+            return (
+              <div key={turnIdx} className="bg-optc-bg border border-optc-border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-optc-accent">Turn {turn.turnNumber}</span>
+                  <div className="flex items-center gap-2">
+                    {specialCount > 0 && (
+                      <span className="text-[9px] text-optc-text-secondary">{specialCount} special{specialCount > 1 ? 's' : ''}</span>
+                    )}
+                    {turns.length > 1 && (
+                      <button type="button" onClick={() => removeTurn(turnIdx)} className="text-optc-text-secondary hover:text-optc-accent text-[10px]">Remove</button>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              <input type="text" value={turn.note} onChange={(e) => updateTurnNote(turnIdx, e.target.value)}
-                placeholder="Notes (blank = Skip)"
-                className="w-full bg-optc-bg-card border border-optc-border/50 rounded px-2 py-1.5 text-optc-text placeholder-optc-text-secondary text-xs focus:outline-none focus:border-optc-accent" />
-            </div>
-          ))}
+                {activeUnits.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {activeUnits.map(({ unit, index, isDual, hasSupport }) => {
+                      const action = turn.actions.find(a => a.unitIndex === index);
+                      const display = getActionDisplay(action, isDual, hasSupport);
+                      return (
+                        <button key={index} type="button"
+                          onClick={() => toggleUnitAction(turnIdx, index)}
+                          className={`flex items-center gap-1 px-1.5 py-1 rounded-lg border text-[10px] transition-all ${
+                            display.color || 'border-optc-border/50 bg-optc-bg-hover/50 text-optc-text-secondary hover:border-optc-border'
+                          }`}
+                          title={getToggleTitle(isDual, hasSupport)}>
+                          <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 border border-optc-border/50">
+                            {!imgErrors.has(unit!.id) ? (
+                              <img src={getCharacterThumbnail(unit!.id)} alt="" className="w-full h-full object-cover"
+                                onError={() => handleImgError(unit!.id)} />
+                            ) : (
+                              <div className="w-full h-full bg-optc-bg-hover text-[6px] flex items-center justify-center">{unit!.id}</div>
+                            )}
+                          </div>
+                          {display.label && <span className="font-bold">{display.label}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <input type="text" value={turn.note} onChange={(e) => updateTurnNote(turnIdx, e.target.value)}
+                  placeholder="Notes (blank = Skip)"
+                  className="w-full bg-optc-bg-card border border-optc-border/50 rounded px-2 py-1.5 text-optc-text placeholder-optc-text-secondary text-xs focus:outline-none focus:border-optc-accent" />
+              </div>
+            );
+          })}
         </div>
       </div>
 

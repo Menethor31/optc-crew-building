@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Team, TeamUnit, TeamGuide, Stage } from '@/types/database';
 import { getCharacterThumbnail, getTypeColor, getShipByName, getDualTypeBorderStyle } from '@/lib/optcdb';
-import { isMyTeam, removeMyTeam } from '@/lib/myTeams';
+import { isMyTeam, removeMyTeam, addMyTeam } from '@/lib/myTeams';
 import CharacterTooltip from './CharacterTooltip';
 import ShipTooltip from './ShipTooltip';
 import SimilarCharacters from './SimilarCharacters';
@@ -220,7 +220,7 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
             </div>
             {team.description && <p className="mt-2 sm:mt-3 text-optc-text-secondary text-xs sm:text-sm">{team.description}</p>}
             {/* Owner actions */}
-            {owner && (
+            {owner ? (
               <div className="mt-3 flex items-center gap-2">
                 <button onClick={startEditing}
                   className="text-[10px] sm:text-xs px-3 py-1 rounded-lg border border-optc-border text-optc-text-secondary hover:text-optc-text hover:border-optc-accent/50 transition-colors">
@@ -229,6 +229,13 @@ export default function TeamDetailClient({ teamId }: TeamDetailClientProps) {
                 <button onClick={() => setShowDeleteConfirm(true)}
                   className="text-[10px] sm:text-xs px-3 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">
                   🗑 Delete
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <button onClick={() => { addMyTeam(teamId); setOwner(true); }}
+                  className="text-[10px] sm:text-xs px-3 py-1 rounded-lg border border-optc-border text-optc-text-secondary hover:text-optc-text hover:border-optc-accent/50 transition-colors">
+                  🔑 Claim this team
                 </button>
               </div>
             )}
