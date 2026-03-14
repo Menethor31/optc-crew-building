@@ -104,7 +104,7 @@ export default function TeamForm({ stage }: TeamFormProps) {
         });
       } else {
         turn.actions = [...turn.actions];
-        turn.actions[existingIdx] = { ...turn.actions[existingIdx], action: nextAction, order: nextAction === 'special' ? turn.actions[existingIdx].order : 0 };
+        turn.actions[existingIdx] = { ...turn.actions[existingIdx], action: nextAction, order: 0 };
       }
     } else {
       const order = getNextSpecialOrder(turn);
